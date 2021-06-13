@@ -31,6 +31,7 @@ epochs = 10
 epsilon = 0.1
 n_lan = 100
 n_iter = 200
+display = False
 
 #mnist_train = datasets.MNIST("../data", train=True, download=True, transform=transforms.ToTensor())
 #mnist_test = datasets.MNIST("../data", train=False, download=True, transform=transforms.ToTensor())
