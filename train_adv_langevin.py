@@ -25,7 +25,7 @@ import matplotlib.animation as animation
 from IPython.display import HTML
 
 from MNISTDataset import *
-from mnist_net import mnist_net
+from mnist_net import *
 
 epochs = 10
 epsilon = 0.1
@@ -48,8 +48,8 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 train_labels = mnist_train_csv.iloc[:, 0]
 train_images = mnist_train_csv.iloc[:, 1:]
 
-train_labels_avd = mnist_train_csv.iloc[:, 0]
-train_images_avd = mnist_train_csv.iloc[:, 1:]
+train_labels_adv = mnist_train_csv.iloc[:, 0]
+train_images_adv = mnist_train_csv.iloc[:, 1:]
 
 test_labels = mnist_test_csv.iloc[:, 0]
 test_images = mnist_test_csv.iloc[:, 1:]
