@@ -136,10 +136,12 @@ def train(epoch):
     model_cnn.cuda()
     for t in range(epoch):
         train_err, train_loss, data_adv = epoch_adversarial_lan(train_data_adv, model_cnn, n_lan ,epsilon, n_iter, opt)
+        plot(data_adv.X.values)
     if t == 4:
         for param_group in opt.param_groups:
                param_group["lr"] = 1e-2
-    print(*("{:.6f}".format(i) for i in (train_err, test_err, adv_err)), sep="\t")
+    print(*("{:.6f}".format(i) for i in (train_err), sep="\t")
+    
     torch.save(model_cnn.state_dict(), "model_cnn.pt")
     
 def plot(images_values, size):
