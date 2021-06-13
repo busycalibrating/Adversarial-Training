@@ -12,6 +12,8 @@ from torch.utils.data import Dataset
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 class MNISTDataset(Dataset):
     def __init__(self, images,  labels, transform):
         self.X = images
