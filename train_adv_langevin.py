@@ -105,7 +105,7 @@ def train(epoch):
     opt = optim.SGD(model_cnn.parameters(), lr=0.01)
     model_cnn.cuda()
     for t in range(epoch):
-        train_err, train_loss, train_data_adv = epoch_adversarial_lan(train_data_adv, model_cnn, n_lan ,epsilon, n_iter, opt)
+        train_err, train_loss, data_adv = epoch_adversarial_lan(train_data_adv, model_cnn, n_lan ,epsilon, n_iter, opt)
     if t == 4:
         for param_group in opt.param_groups:
                param_group["lr"] = 1e-2
@@ -125,5 +125,5 @@ def plot(images_values, size):
 train(epochs)
 
 if display:
-    plot(train_data_adv.X.values)
+    plot(data_adv.X.values)
 
