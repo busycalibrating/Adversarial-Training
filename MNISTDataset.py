@@ -7,6 +7,8 @@
 import torch
 import numpy as np
 import random
+
+from torch.utils.data import Dataset
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 
@@ -14,7 +16,7 @@ class MNISTDataset(Dataset):
     def __init__(self, images,  labels, transform):
         self.X = images
         self.y = labels
-        sefl.transform = transform
+        self.transform = transform
         
     def __len__(self):
         return (len(self.X))
