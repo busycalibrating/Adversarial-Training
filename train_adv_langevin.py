@@ -140,7 +140,7 @@ def train(epoch):
     if t == 4:
         for param_group in opt.param_groups:
                param_group["lr"] = 1e-2
-    print(*("{:.6f}".format(i) for i in (train_err), sep="\t")
+    print(*("{:.6f}".format(i) for i in (train_err)), sep="\t")
     
     torch.save(model_cnn.state_dict(), "model_cnn.pt")
     
