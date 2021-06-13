@@ -136,7 +136,7 @@ def train(epoch):
     model_cnn.cuda()
     for t in range(epoch):
         train_err, train_loss, data_adv = epoch_adversarial_lan(train_data_adv, model_cnn, n_lan ,epsilon, n_iter, opt)
-        plot(data_adv.X.values)
+        plot_adv(data_adv.X.values)
     if t == 4:
         for param_group in opt.param_groups:
                param_group["lr"] = 1e-2
@@ -144,7 +144,7 @@ def train(epoch):
     
     torch.save(model_cnn.state_dict(), "model_cnn.pt")
     
-def plot(images_values, size):
+def plot_adv(images_values, size):
     images = np.reshape(images,(size,28,28))
     plt.figure(figsize=(10,10))
     for i in range (25):
@@ -156,6 +156,6 @@ def plot(images_values, size):
 
 train(epochs)
 
-if display:
-    plot(data_adv.X.values)
+if disp:
+    plot_adv(data_adv.X.values)
 
