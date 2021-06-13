@@ -3,7 +3,7 @@
 
 # In[ ]:
 
-
+from __future__ import print_function
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -12,8 +12,6 @@ from torch.utils.data import DataLoader
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-
-from __future__ import print_function
 #%matplotlib inline
 import argparse
 import os
