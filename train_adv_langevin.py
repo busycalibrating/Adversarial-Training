@@ -78,6 +78,42 @@ model_cnn = model_mnist()
 
 if torch.cuda.is_available():
     model_cnn.cuda()
+    
+def Langevin(model,Z_0,y_i, n_lan,epsilon, step=0.1):
+      #print(Z_0)
+      #print(model)
+      #Z_0 = torch.from_numpy(Z_0)
+      #y_i = torch.from_numpy(y_i)
+      samples = torch.tensor([]).to(device)
+      img_list = []
+      shape = Z_0.shape
+      Z_0 = Z_0.to(device, dtype=torch.float)
+      Z_0.requires_grad_()
+
+      Zj = Z_0
+      y = torch.tensor([]).to(device)
+      y_i = y_i.to(device, dtype=torch.long)
+      for i in range(n_lan):
+        y = torch.cat((y,y_i),0)
+        Zj = Zj.to(device, dtype=torch.float)
+        Zj.requires_grad = True
+    #tensor_i = tensor_i.to(device)
+        u = nn.CrossEntropyLoss()(model(Zj),y_i)
+        #u = potential(Zj).mean()
+        grad = torch.autograd.grad(u, Zj)[0]
+        tensor_step = torch.tensor(np.array([2 * step])).to(device)
+        noise = torch.randn(shape).to(device)
+        Zj = Zj.detach() - step * grad + torch.sqrt(tensor_step) * noise 
+        Zj.data = torch.max(torch.min(Zj, Z_0+epsilon), Z_0-epsilon)
+        Zj.data = Zj.clamp(0,1)
+        #print(Zj.shape)
+        #if i%20 == 0 : 
+          #img_list.append(vutils.make_grid(Zj.detach().cpu(), padding=2, normalize=True))
+        samples = torch.cat((samples,Zj.detach()),0)
+
+        #samples.append(Zj.detach())
+
+      return Zj.cpu().data.numpy(), samples, y
 
 def epoch_adversarial_lan(train_data_adv, model, n_lan, epsilon, n_iter, opt=None, **kwargs):
     """Adversarial training/evaluation epoch over the dataset"""
