@@ -25,6 +25,9 @@ class MNISTDataset(Dataset):
         return (len(self.X))
 
     def update(self, X_new, idx):
+        self.X.iloc[idx, :] = X_new
+        
+    def update_adv(self, X_new, idx):
         self.X_adv.iloc[idx, :] = X_new
 
     def get_sample(self, batch_size):
