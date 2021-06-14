@@ -136,7 +136,7 @@ def train(epoch):
     model_cnn.cuda()
     for t in range(epoch):
         train_err, train_loss, data_adv = epoch_adversarial_lan(train_data, model_cnn, n_lan ,epsilon, n_iter, opt)
-        plot_adv(data_adv.X_adv.values)
+        plot_adv(data_adv.X_adv.values,data_adv.__len__())
     if t == 4:
         for param_group in opt.param_groups:
                param_group["lr"] = 1e-2
