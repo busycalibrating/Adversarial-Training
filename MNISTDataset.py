@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class MNISTDataset(Dataset):
-    def __init__(self, images,  labels, transform):
+    def __init__(self, images, images, labels, transform):
         self.X = images
         self.X_adv = images_adv
         self.y = labels
