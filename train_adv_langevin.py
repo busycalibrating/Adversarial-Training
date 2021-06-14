@@ -63,8 +63,8 @@ transform = transforms.Compose(
 
 #Datasets
 
-train_data = MNISTDataset(train_images,train_images, train_labels, transform)
-test_data = MNISTDataset(test_images,test_images, test_labels, transform)
+train_data = MNISTDataset(train_images,train_images_adv, train_labels, transform)
+test_data = MNISTDataset(test_images,test_images_adv, test_labels, transform)
 # dataloaders
 trainloader = DataLoader(train_data, batch_size=100, shuffle=True)
 testloader = DataLoader(test_data, batch_size=100, shuffle=True)
