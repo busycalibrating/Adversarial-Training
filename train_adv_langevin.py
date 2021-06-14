@@ -27,7 +27,7 @@ from IPython.display import HTML
 from MNISTDataset import *
 from mnist_net import *
 
-epochs = 10
+epochs = 1
 epsilon = 0.1
 n_lan = 100
 n_iter = 200
