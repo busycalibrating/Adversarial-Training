@@ -121,14 +121,14 @@ def epoch_adversarial_lan(train_data, model, n_lan, epsilon, n_iter, opt=None, *
         loss = nn.CrossEntropyLoss()(yp,y_lan)
 
         total_err += (yp.max(dim=1)[1] != y_lan).sum().item()
-        total_loss += loss.item() / (X_old.shape[0] * n_lan)
+        total_loss += loss.item() / (X.shape[0] * n_lan)
         print(total_err,total_loss)
         if opt:
             opt.zero_grad()
             loss.backward()
             opt.step()
         X_new = X_new.reshape(100,784)
-        train_data.update(pd.DataFrame(X_new).values, idx)
+        train_data.update_adv(pd.DataFrame(X_new).values, idx)
     return total_err / (train_data.__len__()*n_lan ), total_loss / train_data.__len__(), train_data
 
 def train(epoch):
