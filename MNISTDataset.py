@@ -17,6 +17,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 class MNISTDataset(Dataset):
     def __init__(self, images,  labels, transform):
         self.X = images
+        self.X_adv = images_adv
         self.y = labels
         self.transform = transform
         
@@ -24,14 +25,14 @@ class MNISTDataset(Dataset):
         return (len(self.X))
 
     def update(self, X_new, idx):
-        self.X.iloc[idx, :] = X_new
+        self.X_adv.iloc[idx, :] = X_new
 
     def get_sample(self, batch_size):
 
         n = self.__len__()
         idx = np.random.randint(1, n, batch_size)
       
-        data = self.X.iloc[idx, :]
+        data = self.X_adv.iloc[idx, :]
         data = torch.tensor(np.asarray(data).astype(np.uint8).reshape(batch_size, 1 , 28, 28))
         data = data.to(device).float ()
 
