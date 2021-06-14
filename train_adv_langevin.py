@@ -150,7 +150,7 @@ def train(epoch):
     torch.save(model_cnn.state_dict(), "model_cnn.pt")
     
 def plot_adv(images_values, size):
-    images = np.reshape(images,(size,28,28))
+    images = np.reshape(images_values,(size,28,28))
     plt.figure(figsize=(10,10))
     for i in range (25):
         plt.subplot(5,5,i+1)
