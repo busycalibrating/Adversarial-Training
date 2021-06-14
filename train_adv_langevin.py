@@ -113,7 +113,7 @@ def epoch_adversarial_lan(train_data, model, n_lan, epsilon, n_iter, opt=None, *
     """Adversarial training/evaluation epoch over the dataset"""
     total_loss, total_err = 0.,0.
     for  i in range(n_iter):
-        X, X_adv_prev y, idx = train_data.get_sample(100)
+        X, X_adv_prev , y, idx = train_data.get_sample(100)
         X_new,samples_lan,y_lan = Langevin(model,X_adv_prev,X, y,n_lan, epsilon, step=0.1)
         samples_lan  = samples_lan.to(device, dtype=torch.float)
         y_lan = y_lan.long()
