@@ -154,13 +154,13 @@ def plot_adv(images_values, size):
     plt.figure(figsize=(10,10))
     for i in range (25):
         plt.subplot(5,5,i+1)
-        plt.imshow(train_images[i,:,:])
+        plt.imshow(images[i,:,:])
         plt.axis('off')
     plt.subplots_adjust(wspace=0.0, hspace=0.1) 
     
 
 train(epochs)
 
-if disp:
+if display:
     plot_adv(data_adv.X_adv.values)
 
