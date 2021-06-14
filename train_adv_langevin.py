@@ -63,14 +63,14 @@ transform = transforms.Compose(
 
 #Datasets
 
-train_data = MNISTDataset(train_images, train_labels, transform)
-test_data = MNISTDataset(test_images, test_labels, transform)
+train_data = MNISTDataset(train_images,train_images, train_labels, transform)
+test_data = MNISTDataset(test_images,test_images, test_labels, transform)
 # dataloaders
 trainloader = DataLoader(train_data, batch_size=100, shuffle=True)
 testloader = DataLoader(test_data, batch_size=100, shuffle=True)
 
-train_data_adv = MNISTDataset(train_images_adv, train_labels_adv, transform)
-trainloader_adv = DataLoader(train_data_adv, batch_size=100, shuffle=True)
+#train_data_adv = MNISTDataset(train_images_adv, train_labels_adv, transform)
+#trainloader_adv = DataLoader(train_data_adv, batch_size=100, shuffle=True)
 
 
 torch.manual_seed(0)   
@@ -109,11 +109,11 @@ def Langevin(model,Z_0,y_i, n_lan,epsilon, step=0.1):
 
       return Zj.cpu().data.numpy(), samples, y
 
-def epoch_adversarial_lan(train_data_adv, model, n_lan, epsilon, n_iter, opt=None, **kwargs):
+def epoch_adversarial_lan(train_data, model, n_lan, epsilon, n_iter, opt=None, **kwargs):
     """Adversarial training/evaluation epoch over the dataset"""
     total_loss, total_err = 0.,0.
     for  i in range(n_iter):
-        X_old, y, idx = train_data_adv.get_sample(100)
+        X_old, y, idx = train_data.get_sample(100)
         X_new,samples_lan,y_lan = Langevin(model,X_old,y,n_lan, epsilon, step=0.1)
         samples_lan  = samples_lan.to(device, dtype=torch.float)
         y_lan = y_lan.long()
@@ -128,15 +128,15 @@ def epoch_adversarial_lan(train_data_adv, model, n_lan, epsilon, n_iter, opt=Non
             loss.backward()
             opt.step()
         X_new = X_new.reshape(100,784)
-        train_data_adv.update(pd.DataFrame(X_new).values, idx)
-    return total_err / (train_data_adv.__len__()*n_lan ), total_loss / train_data_adv.__len__(), train_data_adv 
+        train_data.update(pd.DataFrame(X_new).values, idx)
+    return total_err / (train_data.__len__()*n_lan ), total_loss / train_data.__len__(), train_data
 
 def train(epoch):
     opt = optim.SGD(model_cnn.parameters(), lr=0.01)
     model_cnn.cuda()
     for t in range(epoch):
-        train_err, train_loss, data_adv = epoch_adversarial_lan(train_data_adv, model_cnn, n_lan ,epsilon, n_iter, opt)
-        plot_adv(data_adv.X.values)
+        train_err, train_loss, data_adv = epoch_adversarial_lan(train_data, model_cnn, n_lan ,epsilon, n_iter, opt)
+        plot_adv(data_adv.X_adv.values)
     if t == 4:
         for param_group in opt.param_groups:
                param_group["lr"] = 1e-2
@@ -157,5 +157,5 @@ def plot_adv(images_values, size):
 train(epochs)
 
 if disp:
-    plot_adv(data_adv.X.values)
+    plot_adv(data_adv.X_adv.values)
 
