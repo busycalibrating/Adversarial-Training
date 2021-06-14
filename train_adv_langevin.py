@@ -134,13 +134,18 @@ def epoch_adversarial_lan(train_data, model, n_lan, epsilon, n_iter, opt=None, *
 def train(epoch):
     opt = optim.SGD(model_cnn.parameters(), lr=0.01)
     model_cnn.cuda()
+    train_errors = []
+    train_losses = []
     for t in range(epoch):
         train_err, train_loss, data_adv = epoch_adversarial_lan(train_data, model_cnn, n_lan ,epsilon, n_iter, opt)
+        train_errors.append(train_err)
+        train_losses.append(train_loss)
         plot_adv(data_adv.X_adv.values,data_adv.__len__())
     if t == 4:
         for param_group in opt.param_groups:
                param_group["lr"] = 1e-2
-    print(*("{:.6f}".format(i) for i in (train_err)), sep="\t")
+    print(*("{:.6f}".format(i) for i in (train_errors)), sep="\t")
+    print(*("{:.6f}".format(i) for i in (train_losses)), sep="\t")
     
     torch.save(model_cnn.state_dict(), "model_cnn.pt")
     
