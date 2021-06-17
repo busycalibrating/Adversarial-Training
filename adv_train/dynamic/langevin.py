@@ -3,6 +3,7 @@ import torch.autograd as autograd
 import math 
 # This should abstract the Langevin dynamics, make it easy to change the dynamics or propose new dynamics MCMC type.
 
+
 class Projection:
     def __init__(self, epsilon):
         self.epsilon = epsilon
@@ -11,7 +12,7 @@ class Projection:
         return x
 
 
-class L1Projection(Projection):
+class LinfProjection(Projection):
     def __init__(self, epsilon=0.3):
         super().__init__(epsilon)
 
@@ -21,7 +22,7 @@ class L1Projection(Projection):
 
 
 class Langevin:
-    def __init__(self, forward, n_lan, projection=L1Projection(), lr=0.1):
+    def __init__(self, forward, n_lan, projection=LinfProjection(), lr=0.1):
         # `forward` should be a function (or class ?), that outputs a scalar. Not sure what the best way to implement this ?
         # `projection` is a class that project back onto the constraint set.
         self.forward = forward
@@ -36,19 +37,17 @@ class Langevin:
         grad = autograd.grad(loss, x)[0]
         noise = torch.randn_like(x)
         x = x - self.lr * grad + math.sqrt(2*self.lr) * noise
+        #x = x + math.sqrt(2*self.lr) * noise # Testing if the gradient is actually doing something.
+        #x = x - self.lr * grad # Testing if the noise is doing something
+
         if x_ref is not None:
             x = self.projection(x, x_ref)
-        x = x.clamp(0,1)
+        x = x.clamp(0, 1)
         return x
-
 
     def step(self, x, y, x_ref=None):
         # Function computing several step of Langevin (interface)
-        samples = [x]
         for i in range(self.n_lan):
             x.data = self._step(x, y, x_ref=x_ref)
-            samples.append(x.detach())
-        samples = torch.cat(samples, 0)
-
-        return samples
+        return x
       

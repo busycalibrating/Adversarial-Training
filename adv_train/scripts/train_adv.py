@@ -26,7 +26,6 @@ class AdversarialTraining(Launcher):
         self.opt = optim.SGD(self.model.parameters(), lr=lr)
         self.loss = nn.CrossEntropyLoss()
 
-        self.n_lan = n_lan
         self.langevin = Langevin(self.forward, n_lan=n_lan, lr=step)
 
     def forward(self, x, y, return_pred=False):
@@ -43,26 +42,23 @@ class AdversarialTraining(Launcher):
             x, x_adv, y = x.to(self.device), x_adv.to(self.device), y.to(self.device).long()
             x_adv.requires_grad_()
 
-            samples = self.langevin.step(x_adv, y, x)
-
-            y = y.tile((self.n_lan+1,)) # Might not work for older version of python but pretty convenient.
+            x_adv = self.langevin.step(x_adv, y, x)
             
             self.opt.zero_grad()
-            loss, pred = self.forward(samples, y, return_pred=True)
+            loss, pred = self.forward(x_adv, y, return_pred=True)
             loss.backward()
             self.opt.step()
 
             total_err += (pred.max(dim=1)[1] != y).sum().item()
             total_loss += loss.item()
             
-            self.dataset.update_adv(samples[-1], idx)
-        return total_err / (len(self.dataset)*self.n_lan), total_loss / (len(self.dataset)*self.n_lan)
-
+            self.dataset.update_adv(x_adv, idx)
+        return total_err / len(self.dataset), total_loss / len(self.dataset)
 
     def launch(self, n_epochs=10, save_model=False):
         for _ in range(n_epochs):
             train_err, train_loss = self.epoch_adversarial_lan()
-            print("Train error: %.2f,  Train Loss: %.4f"%(train_err, train_loss)) #TODO: Replace this with a Logger interface
+            print("Train error: %.2f,  Train Loss: %.4f"%(train_err, train_loss))  # TODO: Replace this with a Logger interface
         
         if save_model:
             torch.save(self.model.state_dict(), "model.pt")
@@ -79,4 +75,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    adv_train = AdversarialTraining(args.lr, args.step, args.n_lan, args.batch_size).launch(args.n_epochs, args.save_model)
+    adv_train = AdversarialTraining(args.lr, args.step, args.n_lan, args.batch_size)
+    adv_train.launch(args.n_epochs, args.save_model)
