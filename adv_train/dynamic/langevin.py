@@ -36,9 +36,8 @@ class Langevin:
         loss = self.forward(x, y)
         grad = autograd.grad(loss, x)[0]
         noise = torch.randn_like(x)
-        x = x - self.lr * grad + math.sqrt(2*self.lr) * noise
-        #x = x + math.sqrt(2*self.lr) * noise # Testing if the gradient is actually doing something.
-        #x = x - self.lr * grad # Testing if the noise is doing something
+        
+        x = x + self.lr * grad + math.sqrt(2*self.lr) * noise
 
         if x_ref is not None:
             x = self.projection(x, x_ref)
