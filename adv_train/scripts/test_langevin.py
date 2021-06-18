@@ -14,7 +14,7 @@ import tqdm
 
 
 class LangevinAttack(Launcher):
-    def __init__(self, name, model_dir, step=0.1, n_lan=10, batch_size=100):
+    def __init__(self, name, model_dir, step=1., noise_scale=1., n_lan=10, batch_size=100, sign_flag=False):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
         dataset = load_mnist_dataset()
@@ -25,7 +25,7 @@ class LangevinAttack(Launcher):
         self.loss = nn.CrossEntropyLoss()
 
         self.n_lan = n_lan
-        self.langevin = Langevin(self.forward, n_lan=n_lan, lr=step)
+        self.langevin = Langevin(self.forward, n_lan=n_lan, lr=step, noise_scale=noise_scale, sign_flag=sign_flag)
 
     def forward(self, x, y, return_pred=False):
         pred = self.model(x)
@@ -64,14 +64,17 @@ class LangevinAttack(Launcher):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--n_epochs', default=10, type=int)
-    parser.add_argument('--step', default=0.1, type=float)
+    parser.add_argument('--step', default=1., type=float)
+    parser.add_argument('--noise_scale', default=1., type=float)
     parser.add_argument('--n_lan', default=10, type=int)
     parser.add_argument('--batch_size', default=100, type=int)
     parser.add_argument('--name', default="train_0", type=str)
     parser.add_argument('--model_dir', default="/checkpoint/hberard/OnlineAttack/pretained_models", type=str)
+    parser.add_argument('--sign_flag', action="store_true")
+
 
     args = parser.parse_args()
 
     torch.manual_seed(1234)
-    attack = LangevinAttack(args.name, args.model_dir, args.step, args.n_lan, args.batch_size)
+    attack = LangevinAttack(args.name, args.model_dir, args.step, args.noise_scale, args.n_lan, args.batch_size, args.sign_flag)
     attack.launch(args.n_epochs)

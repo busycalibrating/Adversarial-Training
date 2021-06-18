@@ -22,13 +22,15 @@ class LinfProjection(Projection):
 
 
 class Langevin:
-    def __init__(self, forward, n_lan, projection=LinfProjection(), lr=0.1):
+    def __init__(self, forward, n_lan, projection=LinfProjection(), lr=1., noise_scale=1., sign_flag=False):
         # `forward` should be a function (or class ?), that outputs a scalar. Not sure what the best way to implement this ?
         # `projection` is a class that project back onto the constraint set.
         self.forward = forward
         self.n_lan = n_lan
         self.projection = projection
         self.lr = lr
+        self.sign_flag = sign_flag
+        self.noise_scale = noise_scale
 
     def _step(self, x, y, x_ref=None):
         # Function that computes a single step of Langevin (hidden)
@@ -37,7 +39,9 @@ class Langevin:
         grad = autograd.grad(loss, x)[0]
         noise = torch.randn_like(x)
         
-        x = x + self.lr * grad + math.sqrt(2*self.lr) * noise
+        if self.sign_flag:
+            grad = grad.sign()
+        x = x + self.lr*grad + self.noise_scale*math.sqrt(2*self.lr) * noise
 
         if x_ref is not None:
             x = self.projection(x, x_ref)
