@@ -1,6 +1,7 @@
 import torch
 import torch.autograd as autograd
-import math 
+import math
+import argparse
 # This should abstract the Langevin dynamics, make it easy to change the dynamics or propose new dynamics MCMC type.
 
 
@@ -22,15 +23,27 @@ class LinfProjection(Projection):
 
 
 class Langevin:
-    def __init__(self, forward, n_lan, projection=LinfProjection(), lr=1., noise_scale=1., sign_flag=False):
+    @staticmethod
+    def add_arguments(parser=None):
+        if parser is None:
+            parser = argparse.ArgumentParser()
+
+        parser.add_argument('--n_lan', default=1, type=int)
+        parser.add_argument('--step', default=1, type=float) 
+        parser.add_argument('--noise_scale', default=1., type=float)
+        parser.add_argument('--sign_flag', action="store_true")
+
+        return parser
+
+    def __init__(self, forward, args, projection=LinfProjection()):
         # `forward` should be a function (or class ?), that outputs a scalar. Not sure what the best way to implement this ?
         # `projection` is a class that project back onto the constraint set.
         self.forward = forward
-        self.n_lan = n_lan
+        self.n_lan = args.n_lan
         self.projection = projection
-        self.lr = lr
-        self.sign_flag = sign_flag
-        self.noise_scale = noise_scale
+        self.lr = args.step
+        self.sign_flag = args.sign_flag
+        self.noise_scale = args.noise_scale
 
     def _step(self, x, y, x_ref=None):
         # Function that computes a single step of Langevin (hidden)
