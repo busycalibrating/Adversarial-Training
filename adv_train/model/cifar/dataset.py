@@ -1,7 +1,7 @@
 from torchvision.datasets import CIFAR10
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
-from online_attacks.classifiers.dataset import DatasetParams
+from adv_train.model.dataset import DatasetParams
 
 
 def load_cifar_dataset(params: DatasetParams = DatasetParams(), train: bool = True) -> CIFAR10:

@@ -122,7 +122,7 @@ def make_mnist_model(model: MnistModel) -> nn.Module:
 
 def load_mnist_classifier(model_type: MnistModel, name: str = None, model_dir: str = None, device=None, eval=False) -> nn.Module:
     if model_type == MnistModel.MADRY_MODEL:
-        from online_attacks.classifiers.madry import load_madry_model
+        from adv_train.model.madry import load_madry_model
         filename = os.path.join(model_dir, "mnist", model_type.value, "%s"%name)
         if os.path.exists(filename):
             model = load_madry_model("mnist", filename)

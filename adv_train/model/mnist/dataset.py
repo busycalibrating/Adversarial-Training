@@ -1,7 +1,7 @@
 from torchvision.datasets import MNIST
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
-from online_attacks.classifiers.dataset import DatasetParams
+from adv_train.model.dataset import DatasetParams
 
 
 def load_mnist_dataset(params: DatasetParams = DatasetParams(), train: bool = True) -> MNIST:

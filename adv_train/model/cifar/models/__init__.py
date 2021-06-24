@@ -32,7 +32,7 @@ def make_cifar_model(model: CifarModel) -> nn.Module:
 
 def load_cifar_classifier(model_type: CifarModel, name: str = None, model_dir: str = None, device=None, eval=False) -> nn.Module:
     if model_type == CifarModel.MADRY_MODEL:
-        from online_attacks.classifiers.madry import load_madry_model
+        from adv_train.model.madry import load_madry_model
         filename = os.path.join(model_dir, "cifar", model_type.value, "%s"%name)
         if os.path.exists(filename):
             model = load_madry_model("cifar", filename)
