@@ -41,7 +41,7 @@ class AdversarialTraining(Launcher):
 
         self.model_eval = None
         if args.eval_name is not None:
-            self.model_eval = load_mnist_classifier(MnistModel.MODEL_A, name=args.eval_name, model_dir=args.model_dir, device=self.device, eval=True)
+            self.model_eval = load_mnist_classifier(MnistModel.MODEL_B, name=args.eval_name, model_dir=args.model_dir, device=self.device, eval=True)
 
         self.opt = optim.SGD(self.model.parameters(), lr=args.lr)
         self.loss = nn.CrossEntropyLoss()
