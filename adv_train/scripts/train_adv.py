@@ -28,7 +28,8 @@ class AdversarialTraining(Launcher):
         parser.add_argument('--eval_clean_flag', action="store_true")
 
         return parser
-
+    
+    model_BB = load_mnist_classifier(MnistModel.MODEL_B, device=self.device, eval=False) 
     def __init__(self, args):
         torch.manual_seed(1234)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -37,7 +38,7 @@ class AdversarialTraining(Launcher):
         self.dataset = AdversarialDataset(dataset)
         self.dataloader = DataLoader(self.dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
-        self.model = load_mnist_classifier(MnistModel.MODEL_A, device=self.device, eval=False)
+        self.model = model_BB
 
         self.model_eval = None
         if args.eval_name is not None:
