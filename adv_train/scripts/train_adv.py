@@ -37,7 +37,7 @@ class AdversarialTraining(Launcher):
         self.dataset = AdversarialDataset(dataset)
         self.dataloader = DataLoader(self.dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
-        self.model = load_mnist_classifier(MnistModel.MODEL_B, device=self.device, eval=False)
+        self.model = load_mnist_classifier(MnistModel.MODEL_A, device=self.device, eval=False)
 
         self.model_eval = None
         if args.eval_name is not None:
