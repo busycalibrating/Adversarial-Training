@@ -135,7 +135,7 @@ class modelD(nn.Module):
         return x
 
 
-__mnist_model_dict__ = {MnistModel.MODEL_A: modelA, MnistModel.MODEL_B: modelB,
+__mnist_model_dict__ = {MnistModel.MODEL_A: modelA, MnistModel.MODEL_B: modelB, MnistModel.MODEL_BBis: modelBBis, 
                         MnistModel.MODEL_C: modelC, MnistModel.MODEL_D: modelD}
 
 
