@@ -8,11 +8,15 @@ import os
 import sys
 from pathlib import Path
 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
+
 import torch
 
 from advertorch.bpda import BPDAWrapper
 from advertorch_examples.utils import ROOT_PATH, mkdir
+
+from adv_train.model.dataset import DatasetType
 
 MODEL_PATH = os.path.join(ROOT_PATH, "madry_et_al_models")
 mkdir(MODEL_PATH)
@@ -91,13 +95,13 @@ class TorchWrappedModel(object):
         return self._to_torch(rval)
 
 
-def load_madry_model(dataname, weights_path, device="cuda"):
-    if dataname == "mnist":
+def load_madry_model(dataset: DatasetType, weights_path, device="cuda"):
+    if dataset == DatasetType.MNIST:
         try:
             from .madry_mnist.model import Model
             print("madry_mnist found and imported")
         except (ImportError, ModuleNotFoundError):
-            print("madry_mnist not found, please install madry challenge with install_madry_challenge.sh")
+            raise OSError("madry_mnist not found, please install madry challenge with install_madry_challenge.sh")
 
         def _process_inputs_val(val):
             return val.view(val.shape[0], 784)
@@ -105,13 +109,13 @@ def load_madry_model(dataname, weights_path, device="cuda"):
         def _process_grads_val(val):
             return val.view(val.shape[0], 1, 28, 28)
 
-    elif dataname == "cifar":
+    elif dataset == DatasetType.CIFAR:
 
         try:
             from .madry_cifar.model import Model
             print("madry_cifar found and imported")
         except (ImportError, ModuleNotFoundError):
-            print("madry_cifar not found, please install madry challenge with install_madry_challenge.sh")
+            raise OSError("madry_cifar not found, please install madry challenge with install_madry_challenge.sh")
 
         from functools import partial
         Model = partial(Model, mode="eval")
@@ -123,7 +127,7 @@ def load_madry_model(dataname, weights_path, device="cuda"):
             return val.permute(0, 3, 1, 2) / 255.
 
     else:
-        raise ValueError(dataname)
+        raise ValueError(dataset)
 
     def _wrap_forward(forward):
         def new_forward(inputs_val):

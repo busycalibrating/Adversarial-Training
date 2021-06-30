@@ -24,6 +24,7 @@ class AdversarialTraining(Launcher):
         parser.add_argument('--batch_size', default=100, type=int)
         parser.add_argument('--save_model', action="store_true")
         parser.add_argument('--model_dir', default="/checkpoint/hberard/OnlineAttack/pretained_models", type=str)
+        parser.add_argument('--type', default=MnistModel.MODEL_A, type=MnistModel, choices=MnistModel)
         parser.add_argument('--eval_name', default=None, type=str)
         parser.add_argument('--eval_clean_flag', action="store_true")
 
@@ -37,11 +38,11 @@ class AdversarialTraining(Launcher):
         self.dataset = AdversarialDataset(dataset)
         self.dataloader = DataLoader(self.dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
-        self.model = load_mnist_classifier(MnistModel.MODEL_A, device=self.device, eval=False)
+        self.model = load_mnist_classifier(args.type, device=self.device, eval=False)
 
         self.model_eval = None
         if args.eval_name is not None:
-            self.model_eval = load_mnist_classifier(MnistModel.MODEL_A, name=args.eval_name, model_dir=args.model_dir, device=self.device, eval=True)
+            self.model_eval = load_mnist_classifier(args.type, name=args.eval_name, model_dir=args.model_dir, device=self.device, eval=True)
 
         self.opt = optim.SGD(self.model.parameters(), lr=args.lr)
         self.loss = nn.CrossEntropyLoss()

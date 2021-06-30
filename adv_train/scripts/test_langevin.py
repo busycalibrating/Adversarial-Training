@@ -18,6 +18,7 @@ class LangevinAttack(Launcher):
         
         parser.add_argument('--n_epochs', default=10, type=int)
         parser.add_argument('--batch_size', default=100, type=int)
+        parser.add_argument('--type', default=MnistModel.MODEL_A, type=MnistModel, choices=MnistModel)
         parser.add_argument('--name', default="train_0", type=str)
         parser.add_argument('--model_dir', default="/checkpoint/hberard/OnlineAttack/pretained_models", type=str)
 
@@ -31,7 +32,7 @@ class LangevinAttack(Launcher):
         self.dataset = AdversarialDataset(dataset)
         self.dataloader = DataLoader(self.dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
-        self.model = load_mnist_classifier(MnistModel.MODEL_A, name=args.name, model_dir=args.model_dir, device=self.device, eval=True)
+        self.model = load_mnist_classifier(args.type, name=args.name, model_dir=args.model_dir, device=self.device, eval=True)
         self.loss = nn.CrossEntropyLoss()
 
         self.langevin = Langevin(self.forward, args)

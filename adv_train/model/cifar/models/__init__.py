@@ -9,6 +9,8 @@ from .densenet import densenet_cifar
 from .googlenet import GoogLeNet
 from .wide_resnet import Wide_ResNet
 
+from adv_train.model.dataset import DatasetType
+
 
 class CifarModel(Enum):
     VGG_16 = "VGG16"
@@ -31,24 +33,29 @@ def make_cifar_model(model: CifarModel) -> nn.Module:
 
 
 def load_cifar_classifier(model_type: CifarModel, name: str = None, model_dir: str = None, device=None, eval=False) -> nn.Module:
+    folder = os.path.join(model_dir, DatasetType.CIFAR.value, model_type.value)
+    list_names = [os.path.splitext(f)[0] for f in os.listdir(folder)]
+    if name not in list_names:
+        raise ValueError("Specified name not found. List of names available for model type %s: %s"%(model_type, list_names))
+    
     if model_type == CifarModel.MADRY_MODEL:
         from adv_train.model.madry import load_madry_model
-        filename = os.path.join(model_dir, "cifar", model_type.value, "%s"%name)
+        filename = os.path.join(folder, "%s.pth"%name)
         if os.path.exists(filename):
-            model = load_madry_model("cifar", filename)
+            model = load_madry_model(DatasetType.CIFAR, filename)
         else:
-            raise OSError("File %s not found !"%filename)
+            raise OSError("File %s not found ! List of names available for model type %s: %s"%(model_type, list_names))
 
     elif model_type in __cifar_model_dict__:
         model = make_cifar_model(model_type)
         if name is not None:
-            filename = os.path.join(model_dir, "cifar", model_type.value, "%s.pth"%name)
+            filename = os.path.join(folder, "%s.pth"%name)
             if os.path.exists(filename):
                 state_dict = torch.load(filename, map_location=torch.device('cpu'))
                 model.load_state_dict(state_dict)
             else:
-                raise OSError("File not found !")
-    
+                raise OSError("File %s not found ! List of names available for model type %s: %s"%(model_type, list_names))
+  
     else:
         raise ValueError()
     
