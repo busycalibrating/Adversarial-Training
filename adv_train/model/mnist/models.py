@@ -9,6 +9,7 @@ from adv_train.model.dataset import DatasetType
 class MnistModel(Enum):
     MODEL_A = "modelA"
     MODEL_B = "modelB"
+    MODEL_BBis = "modelBBis"
     MODEL_C = "modelC"
     MODEL_D = "modelD"
     MADRY_MODEL = "madry"
@@ -61,6 +62,30 @@ class modelB(nn.Module):
         x = x.view(x.size(0), -1)
         x = self.fc(x)
         return x
+    
+class modelBBis(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.num_classes = 10
+
+        self.dropout1 = nn.Dropout(0.2)
+        self.conv1 = nn.Conv2d(1, 64, 8)
+        self.conv2 = nn.Conv2d(64, 128, 6)
+        self.conv3 = nn.Conv2d(128, 128, 5)
+        self.dropout2 = nn.Dropout(0.5)
+        self.fc = nn.Linear(128 * 12 * 12, 10)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.dropout1(x)
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = F.relu(self.conv3(x))
+        x = self.dropout2(x)
+        x = x.view(x.size(0), -1)
+        x = self.fc(x)
+        return x
+    
+
 
 
 class modelC(nn.Module):
@@ -113,7 +138,7 @@ class modelD(nn.Module):
         return x
 
 
-__mnist_model_dict__ = {MnistModel.MODEL_A: modelA, MnistModel.MODEL_B: modelB,
+__mnist_model_dict__ = {MnistModel.MODEL_A: modelA, MnistModel.MODEL_B: modelB, MnistModel.MODEL_BBis: modelBBis, 
                         MnistModel.MODEL_C: modelC, MnistModel.MODEL_D: modelD}
 
 

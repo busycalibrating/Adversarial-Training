@@ -29,7 +29,7 @@ class AdversarialTraining(Launcher):
         parser.add_argument('--eval_clean_flag', action="store_true")
 
         return parser
-
+    
     def __init__(self, args):
         torch.manual_seed(1234)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
