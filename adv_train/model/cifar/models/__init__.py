@@ -33,10 +33,11 @@ def make_cifar_model(model: CifarModel) -> nn.Module:
 
 
 def load_cifar_classifier(model_type: CifarModel, name: str = None, model_dir: str = None, device=None, eval=False) -> nn.Module:
-    folder = os.path.join(model_dir, DatasetType.CIFAR.value, model_type.value)
-    list_names = [os.path.splitext(f)[0] for f in os.listdir(folder)]
-    if name not in list_names:
-        raise ValueError("Specified name not found. List of names available for model type %s: %s"%(model_type, list_names))
+    if name is not None:
+        folder = os.path.join(model_dir, DatasetType.CIFAR.value, model_type.value)
+        list_names = [os.path.splitext(f)[0] for f in os.listdir(folder)]
+        if name not in list_names:
+            raise ValueError("Specified name not found. List of names available for model type %s: %s"%(model_type, list_names))
     
     if model_type == CifarModel.MADRY_MODEL:
         from adv_train.model.madry import load_madry_model

@@ -1,6 +1,6 @@
 from adv_train.launcher import Launcher
 from adv_train.model.mnist import load_mnist_classifier, MnistModel, load_mnist_dataset
-from adv_train.dynamic import Langevin
+from adv_train.dynamic import Attacker
 from adv_train.dataset import AdversarialDataset
 import argparse
 import torch
@@ -45,9 +45,9 @@ class AdversarialTraining(Launcher):
             self.model_eval = load_mnist_classifier(args.type, name=args.eval_name, model_dir=args.model_dir, device=self.device, eval=True)
 
         self.opt = optim.SGD(self.model.parameters(), lr=args.lr)
-        self.loss = nn.CrossEntropyLoss()
+        self.loss_fn = nn.CrossEntropyLoss()
 
-        self.langevin = Langevin(self.forward, args)
+        self.attacker = Attacker.load_attacker(self.model, args)
 
         self.save_model = args.save_model
         self.n_epochs = args.n_epochs
@@ -59,7 +59,7 @@ class AdversarialTraining(Launcher):
         else:
             pred = model(x)
 
-        loss = self.loss(pred, y)
+        loss = self.loss_fn(pred, y)
         if return_pred:
             return loss, pred
         return loss
@@ -69,9 +69,14 @@ class AdversarialTraining(Launcher):
         total_loss, total_err = 0.,0.
         for x, y, x_adv, idx in tqdm.tqdm(self.dataloader):
             x, x_adv, y = x.to(self.device), x_adv.to(self.device), y.to(self.device).long()
-            x_adv.requires_grad_()
 
-            x_adv = self.langevin.step(x_adv, y, x)
+            x_adv = self.attacker.perturb(x_adv, y)
+            x_adv = self.attacker.projection(x_adv, x)
+
+            dist = abs(x_adv - x).view(len(x_adv), -1).max(1)[0]
+            if (dist > 0.3 + 1e-6).any():
+                print(dist)
+                raise ValueError()
             
             self.opt.zero_grad()
             loss, pred = self.forward(x_adv, y, return_pred=True)
@@ -121,7 +126,7 @@ class AdversarialTraining(Launcher):
 
 
 if __name__ == "__main__":
-    parser = Langevin.add_arguments()
+    parser = Attacker.add_arguments()
     parser = AdversarialTraining.add_argument(parser)
 
     args = parser.parse_args()

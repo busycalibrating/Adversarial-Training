@@ -1,51 +1,34 @@
 import torch
 import torch.autograd as autograd
+import torch.nn as nn
 import math
-import argparse
+from advertorch.attacks import Attack, LabelMixin
+from .utils import LinfProjection
 # This should abstract the Langevin dynamics, make it easy to change the dynamics or propose new dynamics MCMC type.
 
 
-class Projection:
-    def __init__(self, epsilon):
-        self.epsilon = epsilon
-
-    def __call__(self, x, x_ref):
-        return x
-
-
-class LinfProjection(Projection):
-    def __init__(self, epsilon=0.3):
-        super().__init__(epsilon)
-
-    def __call__(self, x, x_ref):
-        x = torch.max(torch.min(x, x_ref + self.epsilon), x_ref - self.epsilon)
-        return x
-
-
-class Langevin:
-    @staticmethod
-    def add_arguments(parser=None):
-        if parser is None:
-            parser = argparse.ArgumentParser()
-
-        parser.add_argument('--n_lan', default=1, type=int)
-        parser.add_argument('--step', default=1, type=float) 
-        parser.add_argument('--noise_scale', default=1., type=float)
-        parser.add_argument('--sign_flag', action="store_true")
-
-        return parser
-
-    def __init__(self, forward, args, projection=LinfProjection()):
+class Langevin(Attack, LabelMixin):
+    def __init__(self, predict, loss_fn=None, projection=LinfProjection(), nb_iter=1, eps_iter=1, sign_flag=False, noise_scale=1., targeted=False):
         # `forward` should be a function (or class ?), that outputs a scalar. Not sure what the best way to implement this ?
         # `projection` is a class that project back onto the constraint set.
-        self.forward = forward
-        self.n_lan = args.n_lan
+        super().__init__(predict, loss_fn, projection.clip_min, projection.clip_max)
+        if self.loss_fn is None:
+            self.loss_fn = nn.CrossEntropyLoss(reduction="sum")
+        
         self.projection = projection
-        self.lr = args.step
-        self.sign_flag = args.sign_flag
-        self.noise_scale = args.noise_scale
+        self.nb_iter = nb_iter
+        self.eps_iter = eps_iter
 
-    def _step(self, x, y, x_ref=None):
+        self.sign_flag = sign_flag
+        self.noise_scale = noise_scale
+        self.targeted = targeted
+
+    def forward(self, x, y):
+        pred = self.predict(x)
+        loss = self.loss_fn(pred, y)
+        return loss
+
+    def _perturb(self, x, y, x_ref):
         # Function that computes a single step of Langevin (hidden)
         # x_ref if specified is used to project back on the constraint set.
         loss = self.forward(x, y)
@@ -54,16 +37,18 @@ class Langevin:
         
         if self.sign_flag:
             grad = grad.sign()
-        x = x + self.lr*grad + self.noise_scale*math.sqrt(2*self.lr) * noise
+        x = x + self.eps_iter*grad + self.noise_scale*math.sqrt(2*self.eps_iter) * noise
 
-        if x_ref is not None:
-            x = self.projection(x, x_ref)
-        x = x.clamp(0, 1)
+        x = self.projection(x, x_ref)
         return x
 
-    def step(self, x, y, x_ref=None):
+    def perturb(self, x, y=None):
         # Function computing several step of Langevin (interface)
-        for i in range(self.n_lan):
-            x.data = self._step(x, y, x_ref=x_ref)
-        return x
+        x, y = self._verify_and_process_inputs(x, y)
+
+        x_ref = x.clone()
+        x.requires_grad_()
+        for i in range(self.nb_iter):
+            x.data = self._perturb(x, y, x_ref=x_ref)
+        return x.data
       
