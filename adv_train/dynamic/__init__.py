@@ -24,14 +24,17 @@ class Attacker(Enum):
         return parser
 
     @classmethod
-    def load_attacker(cls, classifier, args):
+    def load_attacker(cls, classifier, args, attacker_type=None):
         projection = LinfProjection()
         loss_fn = nn.CrossEntropyLoss()
-        if args.attacker_type == cls.PGD:
+        if attacker_type is None:
+            attacker_type = args.attacker_type
+
+        if attacker_type == cls.PGD:
             attacker = LinfPGDAttack(classifier, loss_fn=loss_fn, eps=projection.epsilon, nb_iter=args.nb_iter, eps_iter=args.eps_iter, clip_min=projection.clip_min,
                                      clip_max=projection.clip_max)
             attacker.projection = projection
-        elif args.attacker_type == cls.LANGEVIN:
+        elif attacker_type == cls.LANGEVIN:
             attacker = Langevin(classifier, loss_fn=loss_fn, projection=projection, nb_iter=args.nb_iter, eps_iter=args.eps_iter, sign_flag=args.sign_flag,
                                  noise_scale=args.noise_scale)
         

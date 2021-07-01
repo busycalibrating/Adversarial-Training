@@ -27,6 +27,7 @@ class AdversarialTraining(Launcher):
         parser.add_argument('--type', default=MnistModel.MODEL_A, type=MnistModel, choices=MnistModel)
         parser.add_argument('--eval_name', default=None, type=str)
         parser.add_argument('--eval_clean_flag', action="store_true")
+        parser.add_argument('--eval_adv', default=None, type=Attacker, choices=Attacker)
 
         return parser
     
@@ -52,6 +53,9 @@ class AdversarialTraining(Launcher):
         self.save_model = args.save_model
         self.n_epochs = args.n_epochs
         self.eval_clean_flag = args.eval_clean_flag
+        self.eval_adv = args.eval_adv
+        if self.eval_adv is not None:
+            self.eval_adv = Attacker.load_attacker(self.model, args, attacker_type=self.eval_adv)
 
     def forward(self, x, y, model=None, return_pred=False):
         if model is None:
@@ -89,7 +93,7 @@ class AdversarialTraining(Launcher):
             self.dataset.update_adv(x_adv, idx)
         return total_err / len(self.dataset)*100, total_loss / len(self.dataset)
 
-    def eval(self, eval=False, adversarial=False):
+    def eval(self, eval=False, adversarial=False, attacker=None):
         model = None
         if eval:
             model = self.model_eval
@@ -99,6 +103,9 @@ class AdversarialTraining(Launcher):
             if adversarial:
                 x = x_adv
             x, y = x.to(self.device), y.to(self.device).long()
+
+            if attacker is not None:
+                x = attacker.perturb(x, y)
                
             loss, pred = self.forward(x, y, model, return_pred=True)
 
@@ -110,16 +117,20 @@ class AdversarialTraining(Launcher):
     def launch(self):
         for _ in range(self.n_epochs):
             train_err, train_loss = self.epoch_adversarial_lan()
-            attacker_err, attacker_loss = 0., 0.
+            attacker_err = 0.
             if self.model_eval is not None:
-                attacker_err, attacker_loss = self.eval(eval=True, adversarial=True)
+                attacker_err, _ = self.eval(eval=True, adversarial=True)
 
-            clean_err, clean_loss = 0., 0.
+            clean_err = 0.
             if self.eval_clean_flag:
-                clean_err, clean_loss = self.eval(eval=False, adversarial=False)
+                clean_err, _ = self.eval(eval=False, adversarial=False)
+
+            adv_err = 0.
+            if self.eval_adv is not None:
+                adv_err, _ = self.eval(eval=False, adversarial=False, attacker=self.eval_adv)
             
-            print("Train error: %.2f%%,  Train Loss: %.4f, Attacker error: %.2f%%,  Attacker Loss: %.4f, Clean error: %.2f%%,  Clean Loss: %.4f"%(
-                train_err, train_loss, attacker_err, attacker_loss, clean_err, clean_loss))  # TODO: Replace this with a Logger interface
+            print("Train error: %.2f%%,  Train Loss: %.4f, Attacker error: %.2f%%, Clean error: %.2f%%, Adversarial error: %.2f%%"%(
+                train_err, train_loss, attacker_err, clean_err, adv_err))  # TODO: Replace this with a Logger interface
             
         if self.save_model:
             torch.save(self.model.state_dict(), "model.pt")
