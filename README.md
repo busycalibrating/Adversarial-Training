@@ -32,3 +32,15 @@ This will train a classifier using langevin. It will also report the error of th
 To be able to run this command you need to have access to `/home/mila/b/berardhu/share/AdversarialTraining/pretrained_models` on the mila cluster. Let me know if you don't have access to it !
 
 To change the model against which you want to evaluate the attacker simply use the flag: `--eval_name train_0`.
+
+
+### Baselines
+
+|   Model A: PGD_ATTACK_train_0                | nb_iter | eps_iter | noise_scale | Training Error | Time   |
+|:--------------------------------------------:|:-------:|:--------:|:-----------:|:--------------:|:------:|
+| PGD                                          | 100     | 0.2      |             | 31.85%         | 3min32 |
+| Langevin (sign_flag = True, noise = normal)  | 100     | 0.2      | 0.1         | 34.63%         | 3min27 |
+| Langevin (sign_flag = True, noise = uniform) | 100     | 0.2      | 0.2         | 33.00%         | 3min27 |
+| Langevin (sign_flag = True, noise = uniform) | 100     | 0.2      | 0.1         | 33.00%         | 3min27 |
+
+

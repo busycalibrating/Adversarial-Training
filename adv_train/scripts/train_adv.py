@@ -19,6 +19,7 @@ class AdversarialTraining(Launcher):
         if parser is None:
             parser = argparse.ArgumentParser()
 
+        parser.add_argument('--attacker', default=Attacker.LANGEVIN, type=Attacker, choices=Attacker)
         parser.add_argument('--lr', default=0.1, type=float)
         parser.add_argument('--n_epochs', default=10, type=int)
         parser.add_argument('--batch_size', default=100, type=int)

@@ -47,7 +47,7 @@ class LangevinAttack(Launcher):
         return loss
 
     def epoch_langevin(self):
-        total_loss, total_err = 0.,0.
+        total_loss, total_err = 0., 0.
         for x, y, x_adv, idx in tqdm.tqdm(self.dataloader):
             x, x_adv, y = x.to(self.device), x_adv.to(self.device), y.to(self.device).long()
 

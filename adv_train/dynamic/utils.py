@@ -1,4 +1,5 @@
 import torch
+from enum import Enum
 
 
 class Projection:
@@ -18,3 +19,8 @@ class LinfProjection(Projection):
     def __call__(self, x, x_ref):
         x = torch.max(torch.min(x, x_ref + self.epsilon), x_ref - self.epsilon)
         return x.clamp(self.clip_min, self.clip_max)
+
+
+class NoiseType(Enum):
+    UNFIFORM = "uniform"
+    NORMAL = "normal"
