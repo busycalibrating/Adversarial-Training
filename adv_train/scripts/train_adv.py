@@ -8,6 +8,9 @@ import torch.optim as optim
 import torch.nn as nn
 from torch.utils.data import DataLoader
 import tqdm
+import os
+import copy
+import subprocess
 
 # Script to train a robust classifier.
 # Should support different ways of doing adversarial training.
@@ -23,12 +26,13 @@ class AdversarialTraining(Launcher):
         parser.add_argument('--lr', default=0.1, type=float)
         parser.add_argument('--n_epochs', default=10, type=int)
         parser.add_argument('--batch_size', default=100, type=int)
-        parser.add_argument('--save_model', action="store_true")
+        parser.add_argument('--save_model', default=None, type=str)
         parser.add_argument('--model_dir', default="/checkpoint/hberard/OnlineAttack/pretained_models", type=str)
         parser.add_argument('--type', default=MnistModel.MODEL_A, type=MnistModel, choices=MnistModel)
         parser.add_argument('--eval_name', default=None, type=str)
         parser.add_argument('--eval_clean_flag', action="store_true")
         parser.add_argument('--eval_adv', default=None, type=Attacker, choices=Attacker)
+        parser.add_argument('--dest', default=None, type=str)
 
         return parser
     
@@ -54,9 +58,16 @@ class AdversarialTraining(Launcher):
         self.save_model = args.save_model
         self.n_epochs = args.n_epochs
         self.eval_clean_flag = args.eval_clean_flag
+
         self.eval_adv = args.eval_adv
         if self.eval_adv is not None:
-            self.eval_adv = Attacker.load_attacker(self.model, args, attacker_type=self.eval_adv)
+            # TODO: This is kinda hacky, would be nice to have a better interface for this !
+            attacker_args = copy.deepcopy(args)
+            attacker_args.attacker_type = self.eval_adv
+            attacker_args.nb_iter = 10
+            self.eval_adv = Attacker.load_attacker(self.model, attacker_args)
+
+        self.dest = args.dest
 
     def forward(self, x, y, model=None, return_pred=False):
         if model is None:
@@ -116,7 +127,8 @@ class AdversarialTraining(Launcher):
         return total_err / len(self.dataset)*100, total_loss / len(self.dataset)
 
     def launch(self):
-        for _ in range(self.n_epochs):
+        p = None
+        for epoch in range(self.n_epochs):
             train_err, train_loss = self.epoch_adversarial_lan()
             attacker_err = 0.
             if self.model_eval is not None:
@@ -130,12 +142,18 @@ class AdversarialTraining(Launcher):
             if self.eval_adv is not None:
                 adv_err, _ = self.eval(eval=False, adversarial=False, attacker=self.eval_adv)
             
-            print("Train error: %.2f%%,  Train Loss: %.4f, Attacker error: %.2f%%, Clean error: %.2f%%, Adversarial error: %.2f%%"%(
-                train_err, train_loss, attacker_err, clean_err, adv_err))  # TODO: Replace this with a Logger interface
+            print("Iter: %i, Train error: %.2f%%,  Train Loss: %.4f, Attacker error: %.2f%%, Clean error: %.2f%%, Adversarial error: %.2f%%"%(
+                epoch, train_err, train_loss, attacker_err, clean_err, adv_err))  # TODO: Replace this with a Logger interface
             
-        if self.save_model:
-            torch.save(self.model.state_dict(), "model.pt")
-
+            if self.save_model is not None:
+                os.makedirs(os.path.dirname(self.save_model), exist_ok=True)
+                torch.save(self.model.state_dict(), self.save_model)
+                if self.dest is not None:
+                    if p is None:
+                        p = subprocess.Popen(["scp", "-r", self.save_model, self.dest], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    elif p.poll() is not None:
+                        p = None
+                    
 
 if __name__ == "__main__":
     parser = Attacker.add_arguments()

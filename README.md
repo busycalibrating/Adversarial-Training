@@ -25,14 +25,16 @@ To change the model against which you want to evaluate the attacker simply use t
 
 
 ## To train a robust classifier using Langevin:
-`python -m adv_train.scripts.train_adv --nb_iter 1 --noise_scale 0.4 --sign_flag --eval_clean_flag --eval_name train_0 --model_dir /home/mila/b/berardhu/share/AdversarialTraining/pretrained_models`
+`python -m adv_train.scripts.train_adv --nb_iter 1 --n_epochs 100 --eps_iter 0.2 --noise_scale 0.2 --sign_flag --eval_adv pgd --model_dir /home/mila/b/berardhu/share/AdversarialTraining/pretrained_models`
 
 This will train a classifier using langevin. It will also report the error of the adversarial dataset agains a PGD robust model, and it will report the error of the trained classifier on the clean data.
 
-To be able to run this command you need to have access to `/home/mila/b/berardhu/share/AdversarialTraining/pretrained_models` on the mila cluster. Let me know if you don't have access to it !
+To evaluate the attacker against another model simply use the flag: `--eval_name train_0`. This requires to have access to `/home/mila/b/berardhu/share/AdversarialTraining/pretrained_models` on the mila cluster. Let me know if you don't have access to it !
 
-To change the model against which you want to evaluate the attacker simply use the flag: `--eval_name train_0`.
+## To test the robust classifier against PGD:
+`python -m adv_train.scripts.test_langevin --nb_iter 100 --eps_iter 0.2 --n_epochs 1 --attacker_type pgd --model_path home/mila/b/berardhu/share/AdversarialTraining/saved_model/model.pt`
 
+I'm saving new models under the folder `home/mila/b/berardhu/share/AdversarialTraining/saved_model/`. Let me know if you don't have access to it.
 
 ### Baselines
 
@@ -42,5 +44,3 @@ To change the model against which you want to evaluate the attacker simply use t
 | Langevin (sign_flag = True, noise = normal)  | 100     | 0.2      | 0.1         | 34.63%         | 3min27 |
 | Langevin (sign_flag = True, noise = uniform) | 100     | 0.2      | 0.2         | 33.00%         | 3min27 |
 | Langevin (sign_flag = True, noise = uniform) | 100     | 0.2      | 0.1         | 33.00%         | 3min27 |
-
-

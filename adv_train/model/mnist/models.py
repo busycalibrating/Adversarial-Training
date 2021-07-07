@@ -146,8 +146,9 @@ def make_mnist_model(model: MnistModel) -> nn.Module:
     return __mnist_model_dict__[model]()
 
 
-def load_mnist_classifier(model_type: MnistModel, name: str = None, model_dir: str = None, device=None, eval=False) -> nn.Module:
-    if name is not None:
+def load_mnist_classifier(model_type: MnistModel, model_path: str = None, name: str = None, model_dir: str = None, device=None, eval=False) -> nn.Module:
+    # If model_path is passed, then name and model_dir are ignored
+    if name is not None and model_path is None:
         folder = os.path.join(model_dir, DatasetType.MNIST.value, model_type.value)
         list_names = [os.path.splitext(f)[0] for f in os.listdir(folder)]
         if name not in list_names:
@@ -166,8 +167,15 @@ def load_mnist_classifier(model_type: MnistModel, name: str = None, model_dir: s
 
     elif model_type in __mnist_model_dict__:
         model = make_mnist_model(model_type)
-        if name is not None:
+        
+        # TODO: This structure is overly complicated, maybe try to simplify it.
+        filename = None
+        if model_path is not None:
+            filename = model_path   
+        elif name is not None:
             filename = os.path.join(folder, "%s.pth"%name)
+
+        if filename is not None:
             if os.path.exists(filename):
                 state_dict = torch.load(filename, map_location=torch.device('cpu'))
                 model.load_state_dict(state_dict)
