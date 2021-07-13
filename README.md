@@ -32,9 +32,9 @@ This will train a classifier using langevin. It will also report the performance
 To evaluate the attacker against another model simply use the flag: `--eval_name train_0`. This requires to have access to `/home/mila/b/berardhu/share/AdversarialTraining/pretrained_models` on the mila cluster. Let me know if you don't have access to it !
 
 ## To test the robust classifier against PGD:
-`python -m adv_train.scripts.test_langevin --nb_iter 100 --eps_iter 0.2 --n_epochs 1 --attacker_type pgd --model_path home/mila/b/berardhu/share/AdversarialTraining/saved_model/model.pt`
+`python -m adv_train.scripts.test_langevin --nb_iter 100 --eps_iter 0.2 --n_epochs 1 --attacker_type pgd --model_path /home/mila/b/berardhu/share/AdversarialTraining/saved_model/model.pt`
 
-I'm saving new models under the folder `home/mila/b/berardhu/share/AdversarialTraining/saved_model/`. Let me know if you don't have access to it.
+I'm saving new models under the folder `/home/mila/b/berardhu/share/AdversarialTraining/saved_model/`. Let me know if you don't have access to it.
 
 ### Baselines
 
