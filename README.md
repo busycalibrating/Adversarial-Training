@@ -1,18 +1,12 @@
 # Adversarial Training
 
-## Requirements:
+## Installation:
+To install package just run:
+`pip install -e .`
+
 To be able to use Madry models, you need to run:
 `./install_madry_challenge.sh -d /home/mila/b/berardhu/share/AdversarialTraining/pretrained_models`
 where -d specifies the folder where to save the models.
-
-You also need to install tensorflow and advertorch.
-
-If you run a version of pytorch that is >= 1.0.0, I would advise to install the following fork:
-```
-git clone git@github.com:hugobb/advertorch.git
-cd advertorch
-python setup.py install
-```
 
 
 ## To test the Langevin dynamic on a classifier:
