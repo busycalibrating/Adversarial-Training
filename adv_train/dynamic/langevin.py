@@ -38,7 +38,7 @@ class Langevin(Attack, LabelMixin):
 
         noise = torch.zeros_like(x)
         if self.noise_type == NoiseType.UNFIFORM:
-            noise.uniform_()
+            noise.uniform_(-1, 1)
         if self.noise_type == NoiseType.NORMAL:
             noise.normal_()
         
