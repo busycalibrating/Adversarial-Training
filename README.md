@@ -37,9 +37,9 @@ Example of command: `python -m adv_train.scripts.test_langevin --nb_iter 100 --n
 |   Model A: PGD_ATTACK_train_0                | nb_iter | eps_iter | noise_scale | Training Error | Time   |
 |:--------------------------------------------:|:-------:|:--------:|:-----------:|:--------------:|:------:|
 | PGD                                          | 100     | 0.2      |             | 31.85%         | 3min32 |
-| Langevin (sign_flag = True, noise = normal)  | 100     | 0.2      | 0.1         | 34.63%         | 3min27 |
-| Langevin (sign_flag = True, noise = uniform) | 100     | 0.2      | 0.2         | 33.00%         | 3min27 |
-| Langevin (sign_flag = True, noise = uniform) | 100     | 0.2      | 0.1         | 33.00%         | 3min27 |
+| Langevin (sign_flag = True, noise_type = normal)  | 100     | 0.2      | 0.1         | 34.63%         | 3min27 |
+| Langevin (sign_flag = True, noise_type = uniform) | 100     | 0.2      | 0.2         | 33.00%         | 3min27 |
+| Langevin (sign_flag = True, noise_type = uniform) | 100     | 0.2      | 0.1         | 33.00%         | 3min27 |
 
 
 |   Model A trained with Langevin              | nb_iter | eps_iter | noise_scale | Training Error | Time   |
