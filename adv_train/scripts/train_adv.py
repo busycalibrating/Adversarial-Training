@@ -15,6 +15,8 @@ import subprocess
 # Script to train a robust classifier.
 # Should support different ways of doing adversarial training.
 
+#TODO: Would be nice to change the args parsing, so that the argument is automatically added to class !
+
 
 class AdversarialTraining(Launcher):
     @staticmethod
@@ -33,6 +35,7 @@ class AdversarialTraining(Launcher):
         parser.add_argument('--eval_clean_flag', action="store_true")
         parser.add_argument('--eval_adv', default=None, type=Attacker, choices=Attacker)
         parser.add_argument('--dest', default=None, type=str)
+        parser.add_argument('--train_on_clean', action="store_true")
 
         return parser
     
@@ -43,6 +46,9 @@ class AdversarialTraining(Launcher):
         dataset = load_mnist_dataset()
         self.dataset = AdversarialDataset(dataset)
         self.dataloader = DataLoader(self.dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
+
+        test_dataset = load_mnist_dataset(train=False)
+        self.test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
 
         self.model = load_mnist_classifier(args.type, device=self.device, eval=False)
 
@@ -68,6 +74,7 @@ class AdversarialTraining(Launcher):
             self.eval_adv = Attacker.load_attacker(self.model, attacker_args)
 
         self.dest = args.dest
+        self.train_on_clean = args.train_on_clean
 
     def forward(self, x, y, model=None, return_pred=False):
         if model is None:
@@ -96,6 +103,10 @@ class AdversarialTraining(Launcher):
             
             self.opt.zero_grad()
             loss, pred = self.forward(x_adv, y, return_pred=True)
+
+            if self.train_on_clean:
+                loss += self.forward(x, y, return_pred=False)
+
             loss.backward()
             self.opt.step()
 
@@ -105,24 +116,36 @@ class AdversarialTraining(Launcher):
             self.dataset.update_adv(x_adv, idx)
         return total_err / len(self.dataset)*100, total_loss / len(self.dataset)
 
-    def eval(self, eval=False, adversarial=False, attacker=None):
-        model = None
-        if eval:
-            model = self.model_eval
+    def _eval(self, x, y, model=None, attacker=None):
+        x, y = x.to(self.device), y.to(self.device).long()
 
-        total_loss, total_err = 0.,0.
-        for x, y, x_adv, _ in self.dataloader:
-            if adversarial:
-                x = x_adv
-            x, y = x.to(self.device), y.to(self.device).long()
+        if attacker is not None:
+            x = attacker.perturb(x, y)
+            
+        loss, pred = self.forward(x, y, model, return_pred=True)
+        acc = (pred.max(dim=1)[1] != y).sum()
 
-            if attacker is not None:
-                x = attacker.perturb(x, y)
-               
-            loss, pred = self.forward(x, y, model, return_pred=True)
+        return loss.item(), acc.item()
 
-            total_err += (pred.max(dim=1)[1] != y).sum().item()
-            total_loss += loss.item()
+    def eval(self, attacker=None):
+        total_loss, total_err = 0., 0.
+        n_samples = 0
+        for x, y in self.test_dataloader:
+            loss, acc = self._eval(x, y, attacker=attacker)
+
+            total_err += acc
+            total_loss += loss
+            n_samples += len(x)
+            
+        return total_err / n_samples*100, total_loss / n_samples
+
+    def eval_attacker(self):
+        total_loss, total_err = 0., 0.
+        for _, y, x, _ in self.dataloader:               
+            loss, acc = self._eval(x, y, self.model_eval)
+
+            total_err += acc
+            total_loss += loss
             
         return total_err / len(self.dataset)*100, total_loss / len(self.dataset)
 
@@ -132,15 +155,15 @@ class AdversarialTraining(Launcher):
             train_err, train_loss = self.epoch_adversarial_lan()
             attacker_err = 0.
             if self.model_eval is not None:
-                attacker_err, _ = self.eval(eval=True, adversarial=True)
+                attacker_err, _ = self.eval_attacker()
 
             clean_err = 0.
             if self.eval_clean_flag:
-                clean_err, _ = self.eval(eval=False, adversarial=False)
-
+                clean_err, _ = self.eval()
+                
             adv_err = 0.
             if self.eval_adv is not None:
-                adv_err, _ = self.eval(eval=False, adversarial=False, attacker=self.eval_adv)
+                adv_err, _ = self.eval(attacker=self.eval_adv)
             
             print("Iter: %i, Train error: %.2f%%,  Train Loss: %.4f, Attacker error: %.2f%%, Clean error: %.2f%%, Adversarial error: %.2f%%"%(
                 epoch, train_err, train_loss, attacker_err, clean_err, adv_err))  # TODO: Replace this with a Logger interface
