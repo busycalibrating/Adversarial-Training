@@ -85,6 +85,13 @@ model_cnn = nn.Sequential(nn.Conv2d(1, 32, 3, padding=1), nn.ReLU(),
                           nn.Linear(7*7*64, 100), nn.ReLU(),
                           nn.Linear(100, 10)).to(device)
 
+#Architecture A si on veut train avec Madry (=> un peu moins performant, cf overleaf)
+model_cnn_A = nn.Sequential(nn.Conv2d(1, 64, 5),nn.ReLU(),
+                            nn.Conv2d(64, 64, 5),nn.ReLU(),
+                            nn.Dropout(0.25), Flatten(),
+                            nn.Linear(64 * 20 * 20, 128),nn.ReLU(),
+                            nn.Dropout(0.5),nn.Linear(128, 10)).to(device)
+
 opt = optim.SGD(model_cnn.parameters(), lr=1e-1)
 for t in range(100):
     train_err, train_loss = epoch_adversarial(train_loader, model_cnn, pgd_linf, opt)
