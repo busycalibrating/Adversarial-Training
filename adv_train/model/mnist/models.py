@@ -13,6 +13,7 @@ class MnistModel(Enum):
     MODEL_C = "modelC"
     MODEL_D = "modelD"
     MADRY_MODEL = "madry"
+    MODEL_Madry = "modelMadry"
 
     def __str__(self):
         return self.value
@@ -136,10 +137,32 @@ class modelD(nn.Module):
         x = self.dropout4(x)
         x = self.fc5(x)
         return x
+    
+    
+class modelMadry(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.num_classes = 10
 
+        self.conv1 = nn.Conv2d(1, 32, 3, padding=1)
+        self.conv2 = nn.Conv2d(32, 32, 3, padding=1, stride=2)
+        self.conv3 = nn.Conv2d(32, 64, 3, padding=1)
+        self.conv4 = nn.Conv2d(64, 64, 3, padding=1, stride=2)
+        self.fc1 = nn.Linear(7*7*64, 100)
+        self.fc2 = nn.Linear(100, 10)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = F.relu(self.conv3(x))
+        x = F.relu(self.conv4(x))
+        x = x.view(x.size(0), -1)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
 
 __mnist_model_dict__ = {MnistModel.MODEL_A: modelA, MnistModel.MODEL_B: modelB, MnistModel.MODEL_BBis: modelBBis, 
-                        MnistModel.MODEL_C: modelC, MnistModel.MODEL_D: modelD}
+                        MnistModel.MODEL_C: modelC, MnistModel.MODEL_D: modelD, MnistModel.MODEL_Madry: modelMadry}
 
 
 def make_mnist_model(model: MnistModel) -> nn.Module:
