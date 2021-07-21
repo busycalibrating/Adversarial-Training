@@ -64,10 +64,18 @@ print("PGD, 100 iter: ", epoch_adversarial(dataloader, model_cnn_robust, pgd_lin
 
 #Use Madry 
 
+mnist_train = datasets.MNIST("../data", train=True, download=True, transform=transforms.ToTensor())
+mnist_test = datasets.MNIST("../data", train=False, download=True, transform=transforms.ToTensor())
+train_loader = DataLoader(mnist_train, batch_size = 100, shuffle=True)
+test_loader = DataLoader(mnist_test, batch_size = 100, shuffle=False)
+
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 torch.manual_seed(0)
+
 class Flatten(nn.Module):
     def forward(self, x):
-        return x.view(x.shape[0], -1)
+        return x.view(x.shape[0], -1)    
 
 model_cnn = nn.Sequential(nn.Conv2d(1, 32, 3, padding=1), nn.ReLU(),
                           nn.Conv2d(32, 32, 3, padding=1, stride=2), nn.ReLU(),
@@ -77,17 +85,13 @@ model_cnn = nn.Sequential(nn.Conv2d(1, 32, 3, padding=1), nn.ReLU(),
                           nn.Linear(7*7*64, 100), nn.ReLU(),
                           nn.Linear(100, 10)).to(device)
 
-#opt = optim.SGD(model_cnn.parameters(), lr=1e-1)
-#for t in range(10):
-    #train_err, train_loss = epoch_adversarial(dataloader, model_cnn, pgd_linf, opt)
-    #test_err, test_loss = epoch(test_loader, model_cnn_robust)
-    #adv_err, adv_loss = epoch_adversarial(test_loader, model_cnn_robust, pgd_linf)
-    #if t == 4:
-   #     for param_group in opt.param_groups:
-  #          param_group["lr"] = 1e-2
- #   print(train_err)
-
-#torch.save(model_cnn.state_dict(), "model_cnn_madry.pt")
-
-#print("FGSM: ", epoch_adversarial(dataloader, model_cnn, fgsm)[0])
-#print("PGD, 40 iter: ", epoch_adversarial(dataloader, model_cnn, pgd_linf, num_iter=40)[0])
+opt = optim.SGD(model_cnn.parameters(), lr=1e-1)
+for t in range(100):
+    train_err, train_loss = epoch_adversarial(train_loader, model_cnn, pgd_linf, opt)
+    test_err, test_loss = epoch(test_loader, model_cnn_robust)
+    adv_err, adv_loss = epoch_adversarial(test_loader, model_cnn_robust, pgd_linf)
+    if t == 4:
+        for param_group in opt.param_groups:
+            param_group["lr"] = 1e-2
+    print(train_err)
+torch.save(model_cnn.state_dict(), "model_cnn_madry.pt")
