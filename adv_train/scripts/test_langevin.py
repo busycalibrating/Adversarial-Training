@@ -22,6 +22,7 @@ class LangevinAttack(Launcher):
         parser.add_argument('--model_path', default=None, type=str)
         parser.add_argument('--name', default="train_0", type=str)
         parser.add_argument('--model_dir', default="/checkpoint/hberard/OnlineAttack/pretained_models", type=str)
+        parser.add_argument('--n_adv', default=1, type=int)
 
         return parser
 
@@ -30,7 +31,7 @@ class LangevinAttack(Launcher):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
         dataset = load_mnist_dataset()
-        self.dataset = AdversarialDataset(dataset)
+        self.dataset = AdversarialDataset(dataset, n_adv=args.n_adv)
         self.dataloader = DataLoader(self.dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
         self.model = load_mnist_classifier(args.type, model_path=args.model_path, name=args.name, model_dir=args.model_dir, device=self.device, eval=True)

@@ -36,6 +36,8 @@ class AdversarialTraining(Launcher):
         parser.add_argument('--eval_adv', default=None, type=Attacker, choices=Attacker)
         parser.add_argument('--dest', default=None, type=str)
         parser.add_argument('--train_on_clean', action="store_true")
+        parser.add_argument('--n_adv', default=1, type=int)
+        parser.add_argument('--restart', action="store_true")
 
         return parser
     
@@ -44,7 +46,7 @@ class AdversarialTraining(Launcher):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
         dataset = load_mnist_dataset()
-        self.dataset = AdversarialDataset(dataset)
+        self.dataset = AdversarialDataset(dataset, n_adv=args.n_adv)
         self.dataloader = DataLoader(self.dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 
         test_dataset = load_mnist_dataset(train=False)
@@ -75,6 +77,7 @@ class AdversarialTraining(Launcher):
 
         self.dest = args.dest
         self.train_on_clean = args.train_on_clean
+        self.restart = args.restart
 
     def forward(self, x, y, model=None, return_pred=False):
         if model is None:
@@ -113,6 +116,8 @@ class AdversarialTraining(Launcher):
             total_err += (pred.max(dim=1)[1] != y).sum().item()
             total_loss += loss.item()
             
+            if self.restart:
+                continue
             self.dataset.update_adv(x_adv, idx)
         return total_err / len(self.dataset)*100, total_loss / len(self.dataset)
 

@@ -30,7 +30,7 @@ class Langevin(Attack, LabelMixin):
         loss = self.loss_fn(pred, y)
         return loss
 
-    def _perturb(self, x, y, x_ref):
+    def __perturb(self, x, y, x_ref):
         # Function that computes a single step of Langevin (hidden)
         # x_ref if specified is used to project back on the constraint set.
         loss = self.forward(x, y)
@@ -56,6 +56,6 @@ class Langevin(Attack, LabelMixin):
         x_ref = x.clone()
         x.requires_grad_()
         for i in range(self.nb_iter):
-            x.data = self._perturb(x, y, x_ref=x_ref)
+            x.data = self.__perturb(x, y, x_ref=x_ref)
         return x.data
       
