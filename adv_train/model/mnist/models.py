@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import torch
 import os
 from adv_train.model.dataset import DatasetType
+from adv_train.utils import Flatten
 
 
 class MnistModel(Enum):
@@ -13,6 +14,7 @@ class MnistModel(Enum):
     MODEL_C = "modelC"
     MODEL_D = "modelD"
     MADRY_MODEL = "madry"
+    MADRY_V2 = "madry_v2"
 
     def __str__(self):
         return self.value
@@ -28,7 +30,7 @@ class modelA(nn.Module):
         self.dropout1 = nn.Dropout(0.25)
         self.fc1 = nn.Linear(64 * 20 * 20, 128)
         self.dropout2 = nn.Dropout(0.5)
-        self.fc2 = nn.Linear(128, 10)
+        self.fc2 = nn.Linear(128, self.num_classes)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = F.relu(self.conv1(x))
@@ -51,7 +53,7 @@ class modelB(nn.Module):
         self.conv2 = nn.Conv2d(64, 128, 6)
         self.conv3 = nn.Conv2d(128, 128, 5)
         self.dropout2 = nn.Dropout(0.5)
-        self.fc = nn.Linear(128 * 12 * 12, 10)
+        self.fc = nn.Linear(128 * 12 * 12, self.num_classes)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.dropout1(x)
@@ -62,7 +64,8 @@ class modelB(nn.Module):
         x = x.view(x.size(0), -1)
         x = self.fc(x)
         return x
-    
+
+
 class modelBBis(nn.Module):
     def __init__(self):
         super().__init__()
@@ -73,7 +76,7 @@ class modelBBis(nn.Module):
         self.conv2 = nn.Conv2d(64, 128, 6)
         self.conv3 = nn.Conv2d(128, 128, 5)
         self.dropout2 = nn.Dropout(0.5)
-        self.fc = nn.Linear(128 * 12 * 12, 10)
+        self.fc = nn.Linear(128 * 12 * 12, self.num_classes)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.dropout1(x)
@@ -86,8 +89,6 @@ class modelBBis(nn.Module):
         return x
     
 
-
-
 class modelC(nn.Module):
     def __init__(self):
         super().__init__()
@@ -96,7 +97,7 @@ class modelC(nn.Module):
         self.conv1 = nn.Conv2d(1, 128, 3)
         self.conv2 = nn.Conv2d(128, 64, 3)
         self.fc1 = nn.Linear(64 * 5 * 5, 128)
-        self.fc2 = nn.Linear(128, 10)
+        self.fc2 = nn.Linear(128, self.num_classes)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = torch.tanh(self.conv1(x))
@@ -122,7 +123,7 @@ class modelD(nn.Module):
         self.dropout3 = nn.Dropout(0.5)
         self.fc4 = nn.Linear(300, 300)
         self.dropout4 = nn.Dropout(0.5)
-        self.fc5 = nn.Linear(300, 10)
+        self.fc5 = nn.Linear(300, self.num_classes)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = x.view(x.size(0), -1)
@@ -137,6 +138,24 @@ class modelD(nn.Module):
         x = self.fc5(x)
         return x
 
+
+class MadryModel(nn.Module):
+    def __init(self):
+        super().__init__()
+        self.num_classes = 10
+
+        self.network = nn.Sequential(
+            nn.Conv2d(1, 32, 3, padding=1), nn.ReLU(),
+            nn.Conv2d(32, 32, 3, padding=1, stride=2), nn.ReLU(),
+            nn.Conv2d(32, 64, 3, padding=1), nn.ReLU(),
+            nn.Conv2d(64, 64, 3, padding=1, stride=2), nn.ReLU(),
+            Flatten(),
+            nn.Linear(7*7*64, 100), nn.ReLU(),
+            nn.Linear(100, self.num_classes))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.network(x)
+        
 
 __mnist_model_dict__ = {MnistModel.MODEL_A: modelA, MnistModel.MODEL_B: modelB, MnistModel.MODEL_BBis: modelBBis, 
                         MnistModel.MODEL_C: modelC, MnistModel.MODEL_D: modelD}
