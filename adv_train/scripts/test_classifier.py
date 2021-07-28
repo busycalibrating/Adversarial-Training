@@ -20,7 +20,7 @@ def fgsm(model, X, y, epsilon=0.3):
     loss.backward()
     return epsilon * delta.grad.detach().sign()
   
-def pgd_linf(model, X, y, epsilon=0.3, alpha=0.01, num_iter=100, randomize=False):
+def pgd_linf(model, X, y, epsilon=0.3, alpha=0.01, num_iter=100, randomize=False, clip_min=0., clip_max=1.):
     """ Construct FGSM adversarial examples on the examples X"""
     if randomize:
         delta = torch.rand_like(X, requires_grad=True)
@@ -32,6 +32,7 @@ def pgd_linf(model, X, y, epsilon=0.3, alpha=0.01, num_iter=100, randomize=False
         loss = nn.CrossEntropyLoss()(model(X + delta), y)
         loss.backward()
         delta.data = (delta + alpha*delta.grad.detach().sign()).clamp(-epsilon,epsilon)
+        delta.data = torch.clamp(X.data + delta.data, clip_min, clip_max) - X.data
         delta.grad.zero_()
     return delta.detach()
 

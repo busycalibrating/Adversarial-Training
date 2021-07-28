@@ -30,7 +30,7 @@ class LangevinAttack(Launcher):
         torch.manual_seed(1234)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        dataset = load_mnist_dataset()
+        dataset = load_mnist_dataset(train=False)
         self.dataset = AdversarialDataset(dataset, n_adv=args.n_adv)
         self.dataloader = DataLoader(self.dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 

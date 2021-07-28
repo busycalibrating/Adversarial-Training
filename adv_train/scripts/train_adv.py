@@ -72,7 +72,7 @@ class AdversarialTraining(Launcher):
             # TODO: This is kinda hacky, would be nice to have a better interface for this !
             attacker_args = copy.deepcopy(args)
             attacker_args.attacker_type = self.eval_adv
-            attacker_args.nb_iter = 10
+            attacker_args.nb_iter = 40
             self.eval_adv = Attacker.load_attacker(self.model, attacker_args)
 
         self.dest = args.dest
