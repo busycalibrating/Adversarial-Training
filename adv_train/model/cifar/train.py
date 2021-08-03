@@ -11,24 +11,40 @@ from online_attacks.attacks import create_attacker
 from online_attacks.utils.optimizer import create_optimizer
 
 
-def train_cifar(params: CifarTrainingParams = CifarTrainingParams(), device: Optional[torch.device] = None) -> nn.Module:
+def train_cifar(
+    params: CifarTrainingParams = CifarTrainingParams(),
+    device: Optional[torch.device] = None,
+) -> nn.Module:
     train_loader, test_loader = create_cifar_loaders(params.dataset_params)
     model = load_cifar_classifier(params.model_type)
-    optimizer = create_optimizer(model.parameters(), params.optimizer_params, n_batches_per_epoch=len(train_loader))
+    optimizer = create_optimizer(
+        model.parameters(),
+        params.optimizer_params,
+        n_batches_per_epoch=len(train_loader),
+    )
     if params.train_on_test:
         train_loader, test_loader = test_loader, train_loader
 
-    #TODO: Implement Ensemble Adversarial Training, where a list of attacker is provided
+    # TODO: Implement Ensemble Adversarial Training, where a list of attacker is provided
     model_attacker = model
     if params.model_attacker is not None:
-        model_attacker = load_cifar_classifier(params.model_type, name=params.model_attacker, model_dir=params.model_dir, device=device)
+        model_attacker = load_cifar_classifier(
+            params.model_type,
+            name=params.model_attacker,
+            model_dir=params.model_dir,
+            device=device,
+        )
 
     attacker = create_attacker(model_attacker, params.attacker, params.attacker_params)
-    trainer = Trainer(model, train_loader, test_loader, optimizer, attacker=attacker, device=device)
-    
+    trainer = Trainer(
+        model, train_loader, test_loader, optimizer, attacker=attacker, device=device
+    )
+
     filename = None
     if params.save_model:
-        filename = os.path.join(params.save_dir, "cifar", params.model_type.value, "%s.pth"%(params.name))
+        filename = os.path.join(
+            params.save_dir, "cifar", params.model_type.value, "%s.pth" % (params.name)
+        )
         dirname = os.path.dirname(filename)
         if not os.path.exists(dirname):
             os.makedirs(dirname)

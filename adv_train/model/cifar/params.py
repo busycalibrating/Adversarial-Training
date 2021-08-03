@@ -12,7 +12,9 @@ class CifarTrainingParams:
     name: str = "cifar"
     model_type: CifarModel = MISSING
     num_epochs: int = 100
-    optimizer_params: OptimizerParams = OptimizerParams(optimizer_type=OptimizerType.SLS)
+    optimizer_params: OptimizerParams = OptimizerParams(
+        optimizer_type=OptimizerType.SLS
+    )
     dataset_params: DatasetParams = DatasetParams()
     save_model: bool = True
     save_dir: str = "./pretained_models"

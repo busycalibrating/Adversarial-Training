@@ -7,10 +7,11 @@ import random
 # - Might not handle large dataset since it creates several copies in memory !
 # - Doesn't support easy evaluation of all elements of the adversarial dataset when n_adv > 1
 
+
 class AdversarialDataset(Dataset):
     def __init__(self, dataset, n_adv=1):
         super().__init__()
-        
+
         self.dataset = dataset
 
         self.n_adv = n_adv
@@ -18,7 +19,7 @@ class AdversarialDataset(Dataset):
         # Maybe need to change this for larger dataset, might be slow.
         self.adv = []
         for x in DataLoader(dataset, batch_size=len(dataset)):
-            self.adv.append(x[0])   
+            self.adv.append(x[0])
         self.adv = torch.cat(self.adv, 0)
         self.adv = self.adv.unsqueeze(1).repeat_interleave(n_adv, dim=1)
 

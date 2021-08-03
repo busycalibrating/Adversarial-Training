@@ -87,7 +87,7 @@ class modelBBis(nn.Module):
         x = x.view(x.size(0), -1)
         x = self.fc(x)
         return x
-    
+
 
 class modelC(nn.Module):
     def __init__(self):
@@ -145,66 +145,94 @@ class MadryModel(nn.Module):
         self.num_classes = 10
 
         self.network = nn.Sequential(
-            nn.Conv2d(1, 32, 3, padding=1), nn.ReLU(),
-            nn.Conv2d(32, 32, 3, padding=1, stride=2), nn.ReLU(),
-            nn.Conv2d(32, 64, 3, padding=1), nn.ReLU(),
-            nn.Conv2d(64, 64, 3, padding=1, stride=2), nn.ReLU(),
+            nn.Conv2d(1, 32, 3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(32, 32, 3, padding=1, stride=2),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, 3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, 3, padding=1, stride=2),
+            nn.ReLU(),
             Flatten(),
-            nn.Linear(7*7*64, 100), nn.ReLU(),
-            nn.Linear(100, self.num_classes))
+            nn.Linear(7 * 7 * 64, 100),
+            nn.ReLU(),
+            nn.Linear(100, self.num_classes),
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.network(x)
-        
 
-__mnist_model_dict__ = {MnistModel.MODEL_A: modelA, MnistModel.MODEL_B: modelB, MnistModel.MODEL_BBis: modelBBis, 
-                        MnistModel.MODEL_C: modelC, MnistModel.MODEL_D: modelD}
+
+__mnist_model_dict__ = {
+    MnistModel.MODEL_A: modelA,
+    MnistModel.MODEL_B: modelB,
+    MnistModel.MODEL_BBis: modelBBis,
+    MnistModel.MODEL_C: modelC,
+    MnistModel.MODEL_D: modelD,
+}
 
 
 def make_mnist_model(model: MnistModel) -> nn.Module:
     return __mnist_model_dict__[model]()
 
 
-def load_mnist_classifier(model_type: MnistModel, model_path: str = None, name: str = None, model_dir: str = None, device=None, eval=False) -> nn.Module:
+def load_mnist_classifier(
+    model_type: MnistModel,
+    model_path: str = None,
+    name: str = None,
+    model_dir: str = None,
+    device=None,
+    eval=False,
+) -> nn.Module:
     # If model_path is passed, then name and model_dir are ignored
     if name is not None and model_path is None:
         folder = os.path.join(model_dir, DatasetType.MNIST.value, model_type.value)
         list_names = [os.path.splitext(f)[0] for f in os.listdir(folder)]
         if name not in list_names:
-            raise ValueError("Specified name not found. List of names available for model type %s: %s"%(model_type, list_names))
+            raise ValueError(
+                "Specified name not found. List of names available for model type %s: %s"
+                % (model_type, list_names)
+            )
 
     if model_type == MnistModel.MADRY_MODEL:
         from adv_train.model.madry import load_madry_model
-        filename = os.path.join(folder, "%s"%name)
+
+        filename = os.path.join(folder, "%s" % name)
         if os.path.exists(filename):
             model = load_madry_model(DatasetType.MNIST, filename)
         else:
-            raise OSError("File %s not found ! List of names available for model type %s: %s"%(model_type, list_names))
-        
+            raise OSError(
+                "File %s not found ! List of names available for model type %s: %s"
+                % (model_type, list_names)
+            )
+
         # Hack to be able to use some attacker class
         model.num_classes = 10
 
     elif model_type in __mnist_model_dict__:
         model = make_mnist_model(model_type)
-        
+
         # TODO: This structure is overly complicated, maybe try to simplify it.
         filename = None
         if model_path is not None:
-            filename = model_path   
+            filename = model_path
         elif name is not None:
-            filename = os.path.join(folder, "%s.pth"%name)
+            filename = os.path.join(folder, "%s.pth" % name)
 
         if filename is not None:
             if os.path.exists(filename):
-                state_dict = torch.load(filename, map_location=torch.device('cpu'))
+                state_dict = torch.load(filename, map_location=torch.device("cpu"))
                 model.load_state_dict(state_dict)
             else:
-                raise OSError("File %s not found ! List of names available for model type %s: %s"%(model_type, list_names))
+                raise OSError(
+                    "File %s not found ! List of names available for model type %s: %s"
+                    % (model_type, list_names)
+                )
 
     else:
         raise ValueError()
-    
+
     if eval:
         model.eval()
-        
+
     return model.to(device)
