@@ -21,7 +21,8 @@ import subprocess
 # Script to train a robust classifier.
 # Should support different ways of doing adversarial training.
 
-# TODO: Would be nice to change the args parsing, so that the argument is automatically added to class !
+# TODO: Would be nice to change the args parsing,
+# so that the argument is automatically added to class !
 
 
 class AdversarialTraining(Launcher):
@@ -118,7 +119,8 @@ class AdversarialTraining(Launcher):
 
         self.eval_adv = args.eval_adv
         if self.eval_adv is not None:
-            # TODO: This is kinda hacky, would be nice to have a better interface for this !
+            # TODO: This is kinda hacky,
+            # would be nice to have a better interface for this !
             attacker_args = copy.deepcopy(args)
             attacker_args.attacker_type = self.eval_adv
             attacker_args.nb_iter = 40
@@ -154,7 +156,7 @@ class AdversarialTraining(Launcher):
 
             if not self.attacker.projection.is_valid(x, x_adv):
                 raise ValueError()
-            
+
             self.opt.zero_grad()
             loss, pred = self.forward(x_adv, y, return_pred=True)
 

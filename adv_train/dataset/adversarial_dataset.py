@@ -1,6 +1,11 @@
 from torch.utils.data import Dataset, DataLoader
 import torch
 import random
+import numpy as np
+import torchvision
+import math
+import matplotlib.pyplot as plt
+from adv_train.utils import plot
 
 
 # TODO: There might be a lot of rework to do with this class but should work fine for now.
@@ -36,3 +41,36 @@ class AdversarialDataset(Dataset):
 
     def checkpoint(self, filename):
         torch.save(self.adv, filename)
+
+    def load(self, filename):
+        self.adv = torch.load(filename)
+
+    def plot(self, idx=None, n_adv=100, nrow=None, scale_noise=1, save=None, fig=None):
+        if idx is None:
+            idx = np.random.choice(self.__len__(), size=n_adv, replace=False)
+        idx2 = np.random.choice(self.n_adv, size=n_adv)
+
+        noise = self.compute_noise(idx, idx2)
+        img = self.adv[idx, idx2] + scale_noise * noise
+
+        fig = plot(img, n_adv, nrow, scale_noise, save)
+        return fig
+
+    def compute_noise(self, idx, idx2):
+        # A bit hacky but not sure how to use this otherwise
+        dataset = torch.utils.data.Subset(self.dataset, idx)
+        dataset = next(iter(DataLoader(dataset, batch_size=len(dataset))))[0]
+
+        noise = dataset - self.adv[idx, idx2]
+        return noise
+
+    def plot_noise(self, idx=None, n_adv=100, nrow=None, scale_noise=1, save=None):
+        if idx is None:
+            idx = np.random.choice(self.__len__(), size=n_adv, replace=False)
+        idx2 = np.random.choice(self.n_adv, size=n_adv)
+
+        noise = self.compute_noise(idx, idx2)
+        img = scale_noise * noise
+
+        fig = plot(img, n_adv, nrow, scale_noise, save)
+        return fig
