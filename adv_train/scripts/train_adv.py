@@ -56,9 +56,6 @@ class AdversarialTraining(Launcher):
                 choices=CifarModel,
             )
 
-        parser.add_argument(
-            "--attacker", default=Attacker.LANGEVIN, type=Attacker, choices=Attacker
-        )
         parser.add_argument("--lr", default=0.1, type=float)
         parser.add_argument("--n_epochs", default=10, type=int)
         parser.add_argument("--batch_size", default=100, type=int)
@@ -82,7 +79,7 @@ class AdversarialTraining(Launcher):
         torch.manual_seed(1234)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        dataset = load_dataset(args.dataset)
+        dataset = load_dataset(args.dataset, train=True)
         self.dataset = AdversarialDataset(dataset, n_adv=args.n_adv)
         self.dataloader = DataLoader(
             self.dataset, batch_size=args.batch_size, shuffle=True, num_workers=4
@@ -186,6 +183,7 @@ class AdversarialTraining(Launcher):
         return loss.item(), acc.item()
 
     def eval(self, attacker=None):
+        self.model.eval()
         total_loss, total_err = 0.0, 0.0
         n_samples = 0
         for x, y in self.test_dataloader:
@@ -194,6 +192,7 @@ class AdversarialTraining(Launcher):
             total_err += acc
             total_loss += loss
             n_samples += len(x)
+        self.model.train()
 
         return total_err / n_samples * 100, total_loss / n_samples
 

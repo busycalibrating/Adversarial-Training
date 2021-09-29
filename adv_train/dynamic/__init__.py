@@ -1,5 +1,5 @@
 from .langevin import Langevin
-from advertorch.attacks import LinfPGDAttack
+from advertorch.attacks import LinfPGDAttack, Attack
 from .utils import LinfProjection, NoiseType
 from enum import Enum
 import argparse
@@ -7,9 +7,19 @@ import torch.nn as nn
 from adv_train.model import DatasetType
 
 
+# Defines a dummy attacker
+class NoAttacker(Attack):
+    def __init__(self):
+        pass
+
+    def perturb(self, x, y=None):
+        return x
+
+
 class Attacker(Enum):
     PGD = "pgd"
     LANGEVIN = "langevin"
+    NONE = "none"
 
     @classmethod
     def add_arguments(cls, parser=None):
@@ -39,8 +49,11 @@ class Attacker(Enum):
         loss_fn = nn.CrossEntropyLoss()
         if attacker_type is None:
             attacker_type = args.attacker_type
-
-        if attacker_type == cls.PGD:
+        
+        if attacker_type == cls.NONE:
+            attacker = NoAttacker()
+            attacker.projection = projection
+        elif attacker_type == cls.PGD:
             attacker = LinfPGDAttack(
                 classifier,
                 loss_fn=loss_fn,
