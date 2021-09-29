@@ -1,5 +1,5 @@
 from .langevin import Langevin
-from advertorch.attacks import LinfPGDAttack, Attack
+from advertorch.attacks import LinfPGDAttack, Attack, GradientSignAttack
 from .utils import LinfProjection, NoiseType
 from enum import Enum
 import argparse
@@ -17,7 +17,10 @@ class NoAttacker(Attack):
 
 
 class Attacker(Enum):
+    FGSM = "fgsm"
     PGD = "pgd"
+    PGD_40 = "pgd-40"
+    PGD_100 = "pgd-100"
     LANGEVIN = "langevin"
     NONE = "none"
 
@@ -53,12 +56,45 @@ class Attacker(Enum):
         if attacker_type == cls.NONE:
             attacker = NoAttacker()
             attacker.projection = projection
+        elif attacker_type == cls.FGSM:
+            attacker = GradientSignAttack(
+                classifier,
+                loss_fn=loss_fn,
+                eps=projection.epsilon,
+                clip_min=projection.clip_min,
+                clip_max=projection.clip_max,
+            )
+            attacker.projection = projection
         elif attacker_type == cls.PGD:
             attacker = LinfPGDAttack(
                 classifier,
                 loss_fn=loss_fn,
                 eps=projection.epsilon,
                 nb_iter=args.nb_iter,
+                eps_iter=args.eps_iter,
+                clip_min=projection.clip_min,
+                clip_max=projection.clip_max,
+                rand_init=False,
+            )
+            attacker.projection = projection
+        elif attacker_type == cls.PGD_40:
+            attacker = LinfPGDAttack(
+                classifier,
+                loss_fn=loss_fn,
+                eps=projection.epsilon,
+                nb_iter=40,
+                eps_iter=args.eps_iter,
+                clip_min=projection.clip_min,
+                clip_max=projection.clip_max,
+                rand_init=False,
+            )
+            attacker.projection = projection
+        elif attacker_type == cls.PGD_100:
+            attacker = LinfPGDAttack(
+                classifier,
+                loss_fn=loss_fn,
+                eps=projection.epsilon,
+                nb_iter=100,
                 eps_iter=args.eps_iter,
                 clip_min=projection.clip_min,
                 clip_max=projection.clip_max,

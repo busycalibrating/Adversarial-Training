@@ -94,7 +94,7 @@ class LangevinAttack(Launcher):
 
     def epoch_langevin(self):
         total_loss, total_err = 0.0, 0.0
-        for x, y, x_adv, idx in tqdm.tqdm(self.dataloader):
+        for x, y, x_adv, idx in self.dataloader:
             x, x_adv, y = (
                 x.to(self.device),
                 x_adv.to(self.device),
@@ -116,11 +116,12 @@ class LangevinAttack(Launcher):
         return total_err / len(self.dataset), total_loss / len(self.dataset)
 
     def launch(self):
-        for _ in range(self.n_epochs):
+        for _ in tqdm.tqdm(range(self.n_epochs)):
             train_err, train_loss = self.epoch_langevin()
-            print(
-                "Train error: %.2f%%,  Train Loss: %.4f" % (train_err * 100, train_loss)
-            )  # TODO: Replace this with a Logger interface
+        
+        print(
+            "Train error: %.2f%%,  Train Loss: %.4f" % (train_err * 100, train_loss)
+        )  # TODO: Replace this with a Logger interface
 
 
 if __name__ == "__main__":

@@ -37,6 +37,10 @@ You just need to add the  options `--restart` and `--attacker pgd`:
 
 I'm saving new models under the folder `/home/mila/b/berardhu/share/AdversarialTraining/saved_model/`. Let me know if you don't have access to it.
 
+--------------------------
+# 5. To test a classifier against FGSM, PGD-40 and PGD-100
+`./adv_train/scripts/test_all.sh /home/mila/b/berardhu/share/AdversarialTraining/saved_model/model_new.pt`
+
 ---------------
 ## Baselines
 
