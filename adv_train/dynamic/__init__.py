@@ -56,6 +56,7 @@ class Attacker(Enum):
         if attacker_type == cls.NONE:
             attacker = NoAttacker()
             attacker.projection = projection
+            attacker.nb_iter = 0
         elif attacker_type == cls.FGSM:
             attacker = GradientSignAttack(
                 classifier,
@@ -65,6 +66,7 @@ class Attacker(Enum):
                 clip_max=projection.clip_max,
             )
             attacker.projection = projection
+            attacker.nb_iter = 1
         elif attacker_type == cls.PGD:
             attacker = LinfPGDAttack(
                 classifier,

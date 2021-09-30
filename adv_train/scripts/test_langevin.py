@@ -4,8 +4,8 @@ from adv_train.model import (
     DatasetType,
     MnistModel,
     CifarModel,
-    load_classifier,
     load_dataset,
+    load_classifier,
 )
 from adv_train.dynamic import Attacker
 from adv_train.dataset import AdversarialDataset
@@ -14,11 +14,12 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 import tqdm
+from adv_train.utils.logger import Database
 
 
 class LangevinAttack(Launcher):
-    @staticmethod
-    def add_arguments(parser=None):
+    @classmethod
+    def add_arguments(cls, parser=None):
         if parser is None:
             parser = argparse.ArgumentParser()
 
@@ -57,10 +58,13 @@ class LangevinAttack(Launcher):
             type=str,
         )
         parser.add_argument("--n_adv", default=1, type=int)
+        parser.add_argument("--log_dir", default="./logs", type=int)
+        parser.add_argument("--record_id", default=None)
 
         return parser
 
     def __init__(self, args):
+        super().__init__(self, args)
         torch.manual_seed(1234)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -70,15 +74,23 @@ class LangevinAttack(Launcher):
             self.dataset, batch_size=args.batch_size, shuffle=True, num_workers=4
         )
 
-        self.model = load_classifier(
-            args.dataset,
-            args.type,
-            model_path=args.model_path,
-            name=args.name,
-            model_dir=args.model_dir,
-            device=self.device,
-            eval=True,
-        )
+        if args.model_path is None:
+            db = Database(args.log_dir)
+            if args.record_id is None:
+                raise ValueError("Please either specify --model_path or --record_id.")
+            record = db.load_record(args.record_id)
+            self.model = record.load_model(device=self.device, eval=True)
+        else:
+            self.model = load_classifier(
+                args.dataset,
+                args.type,
+                model_path=args.model_path,
+                name=args.name,
+                model_dir=args.model_dir,
+                device=self.device,
+                eval=True,
+            )
+
         self.loss_fn = nn.CrossEntropyLoss()
 
         self.attacker = Attacker.load_attacker(self.model, args)
@@ -132,4 +144,4 @@ if __name__ == "__main__":
 
     torch.manual_seed(1234)
     attack = LangevinAttack(args)
-    attack.launch()
+    attack.run()

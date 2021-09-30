@@ -8,7 +8,6 @@ from adv_train.model import (
 )
 from adv_train.dynamic import Attacker
 from adv_train.dataset import AdversarialDataset
-import argparse
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -17,6 +16,7 @@ import tqdm
 import os
 import copy
 import subprocess
+from adv_train.utils.logger import Database
 
 # Script to train a robust classifier.
 # Should support different ways of doing adversarial training.
@@ -26,10 +26,9 @@ import subprocess
 
 
 class AdversarialTraining(Launcher):
-    @staticmethod
-    def add_argument(parser=None):
-        if parser is None:
-            parser = argparse.ArgumentParser()
+    @classmethod
+    def add_argument(cls, parser=None):
+        parser = super().add_arguments(parser)
 
         parser.add_argument(
             "--dataset",
@@ -72,60 +71,12 @@ class AdversarialTraining(Launcher):
         parser.add_argument("--train_on_clean", action="store_true")
         parser.add_argument("--n_adv", default=1, type=int)
         parser.add_argument("--restart", action="store_true")
+        parser.add_argument("--log_dir", default="./logs", type=str)
 
         return parser
 
     def __init__(self, args):
-        torch.manual_seed(1234)
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-
-        dataset = load_dataset(args.dataset, train=True)
-        self.dataset = AdversarialDataset(dataset, n_adv=args.n_adv)
-        self.dataloader = DataLoader(
-            self.dataset, batch_size=args.batch_size, shuffle=True, num_workers=4
-        )
-
-        test_dataset = load_dataset(args.dataset, train=False)
-        self.test_dataloader = DataLoader(
-            test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4
-        )
-
-        self.model = load_classifier(
-            args.dataset, args.type, device=self.device, eval=False
-        )
-
-        self.model_eval = None
-        if args.eval_name is not None:
-            self.model_eval = load_classifier(
-                args.dataset,
-                args.type,
-                name=args.eval_name,
-                model_dir=args.model_dir,
-                device=self.device,
-                eval=True,
-            )
-
-        self.opt = optim.SGD(self.model.parameters(), lr=args.lr)
-        self.loss_fn = nn.CrossEntropyLoss()
-
-        self.attacker = Attacker.load_attacker(self.model, args)
-
-        self.save_model = args.save_model
-        self.n_epochs = args.n_epochs
-        self.eval_clean_flag = args.eval_clean_flag
-
-        self.eval_adv = args.eval_adv
-        if self.eval_adv is not None:
-            # TODO: This is kinda hacky,
-            # would be nice to have a better interface for this !
-            attacker_args = copy.deepcopy(args)
-            attacker_args.attacker_type = self.eval_adv
-            attacker_args.nb_iter = 40
-            self.eval_adv = Attacker.load_attacker(self.model, attacker_args)
-
-        self.dest = args.dest
-        self.train_on_clean = args.train_on_clean
-        self.restart = args.restart
+        super().__init__(args)
 
     def forward(self, x, y, model=None, return_pred=False):
         if model is None:
@@ -141,6 +92,7 @@ class AdversarialTraining(Launcher):
     def epoch_adversarial_lan(self):
         """Adversarial training/evaluation epoch over the dataset"""
         total_loss, total_err = 0.0, 0.0
+        num_grad = 0
         for x, y, x_adv, idx in tqdm.tqdm(self.dataloader):
             x, x_adv, y = (
                 x.to(self.device),
@@ -150,6 +102,8 @@ class AdversarialTraining(Launcher):
 
             x_adv = self.attacker.perturb(x_adv, y)
             x_adv = self.attacker.projection(x_adv, x)
+
+            num_grad += self.attacker.nb_iter*len(x)
 
             if not self.attacker.projection.is_valid(x, x_adv):
                 raise ValueError()
@@ -163,13 +117,15 @@ class AdversarialTraining(Launcher):
             loss.backward()
             self.opt.step()
 
+            num_grad += len(x)
+
             total_err += (pred.max(dim=1)[1] != y).sum().item()
             total_loss += loss.item()
 
             if self.restart:
                 continue
-            self.dataset.update_adv(x_adv, idx)
-        return total_err / len(self.dataset) * 100, total_loss / len(self.dataset)
+            self._dataset.update_adv(x_adv, idx)
+        return total_err / len(self._dataset) * 100, total_loss / len(self._dataset), num_grad
 
     def _eval(self, x, y, model=None, attacker=None):
         x, y = x.to(self.device), y.to(self.device).long()
@@ -204,41 +160,98 @@ class AdversarialTraining(Launcher):
             total_err += acc
             total_loss += loss
 
-        return total_err / len(self.dataset) * 100, total_loss / len(self.dataset)
+        return total_err / len(self._dataset) * 100, total_loss / len(self._dataset)
 
     def launch(self):
-        p = None
-        for epoch in range(self.n_epochs):
-            train_err, train_loss = self.epoch_adversarial_lan()
-            attacker_err = 0.0
-            if self.model_eval is not None:
-                attacker_err, _ = self.eval_attacker()
+        db = Database()
+        self.record = db.create_record()
+        self.record.save_hparams(self.args)
 
-            clean_err = 0.0
-            if self.eval_clean_flag:
-                clean_err, _ = self.eval()
+        try:
+            torch.manual_seed(1234)
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
-            adv_err = 0.0
+            dataset = load_dataset(self.dataset, train=True)
+            self._dataset = AdversarialDataset(dataset, n_adv=self.n_adv)
+            self.dataloader = DataLoader(
+                self._dataset, batch_size=self.batch_size, shuffle=True, num_workers=4
+            )
+
+            test_dataset = load_dataset(self.dataset, train=False)
+            self.test_dataloader = DataLoader(
+                test_dataset, batch_size=self.batch_size, shuffle=False, num_workers=4
+            )
+
+            self.model = load_classifier(
+                self.dataset, self.type, device=self.device, eval=False
+            )
+
+            self.model_eval = None
+            if self.eval_name is not None:
+                self.model_eval = load_classifier(
+                    self.dataset,
+                    self.type,
+                    name=self.eval_name,
+                    model_dir=self.model_dir,
+                    device=self.device,
+                    eval=True,
+                )
+
+            self.opt = optim.SGD(self.model.parameters(), lr=self.lr)
+            self.loss_fn = nn.CrossEntropyLoss()
+
+            self.attacker = Attacker.load_attacker(self.model, self.args)
+
             if self.eval_adv is not None:
-                adv_err, _ = self.eval(attacker=self.eval_adv)
+                # TODO: This is kinda hacky,
+                # would be nice to have a better interface for this !
+                attacker_args = copy.deepcopy(self.args)
+                attacker_args.attacker_type = self.eval_adv
+                attacker_args.nb_iter = 40
+                self.eval_adv = Attacker.load_attacker(self.model, attacker_args)
 
-            print(
-                "Iter: %i, Train error: %.2f%%,  Train Loss: %.4f, Attacker error: %.2f%%, Clean error: %.2f%%, Adversarial error: %.2f%%"
-                % (epoch, train_err, train_loss, attacker_err, clean_err, adv_err)
-            )  # TODO: Replace this with a Logger interface
+            p = None
+            for epoch in range(self.n_epochs):
+                train_err, train_loss, num_grad = self.epoch_adversarial_lan()
+                attacker_err = 0.0
+                if self.model_eval is not None:
+                    attacker_err, _ = self.eval_attacker()
 
-            if self.save_model is not None:
-                os.makedirs(os.path.dirname(self.save_model), exist_ok=True)
-                torch.save(self.model.state_dict(), self.save_model)
-                if self.dest is not None:
-                    if p is None:
-                        p = subprocess.Popen(
-                            ["scp", "-r", self.save_model, self.dest],
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE,
-                        )
-                    elif p.poll() is not None:
-                        p = None
+                clean_err = 0.0
+                if self.eval_clean_flag:
+                    clean_err, _ = self.eval()
+
+                adv_err = 0.0
+                if self.eval_adv is not None:
+                    adv_err, _ = self.eval(attacker=self.eval_adv)
+
+                print(
+                    "Iter: %i, Train error: %.2f%%,  Train Loss: %.4f, Attacker error: %.2f%%, Clean error: %.2f%%, Adversarial error: %.2f%%"
+                    % (epoch, train_err, train_loss, attacker_err, clean_err, adv_err)
+                )  # TODO: Replace this with a Logger interface
+
+                self.record.add({"epoch": epoch, "train_err": train_err, "train_loss": train_loss, "attacker_err": attacker_err,
+                                 "clean_err": clean_err, "adv_err": adv_err, "num_grad": num_grad})
+
+                if self.save_model is not None:
+                    os.makedirs(os.path.dirname(self.save_model), exist_ok=True)
+                    torch.save(self.model.state_dict(), self.save_model)
+                    if self.dest is not None:
+                        if p is None:
+                            p = subprocess.Popen(
+                                ["scp", "-r", self.save_model, self.dest],
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                            )
+                        elif p.poll() is not None:
+                            p = None
+                else:
+                    self.record.save_model(self.model)
+            self.record.close()
+        
+        except:
+            self.record.fail()
+            raise
 
 
 if __name__ == "__main__":
@@ -248,4 +261,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     adv_train = AdversarialTraining(args)
-    adv_train.launch()
+    adv_train.run()
