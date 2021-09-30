@@ -47,7 +47,7 @@ class LangevinAttack(Launcher):
                 choices=CifarModel,
             )
 
-        parser.add_argument("--n_epochs", default=10, type=int)
+        parser.add_argument("--n_epochs", default=1, type=int)
         parser.add_argument("--batch_size", default=100, type=int)
         parser.add_argument("--model_path", default=None, type=str)
         parser.add_argument("--name", default="train_0", type=str)
@@ -94,7 +94,7 @@ class LangevinAttack(Launcher):
 
     def epoch_langevin(self):
         total_loss, total_err = 0.0, 0.0
-        for x, y, x_adv, idx in self.dataloader:
+        for x, y, x_adv, idx in tqdm.tqdm(self.dataloader):
             x, x_adv, y = (
                 x.to(self.device),
                 x_adv.to(self.device),
@@ -116,7 +116,7 @@ class LangevinAttack(Launcher):
         return total_err / len(self.dataset), total_loss / len(self.dataset)
 
     def launch(self):
-        for _ in tqdm.tqdm(range(self.n_epochs)):
+        for _ in range(self.n_epochs):
             train_err, train_loss = self.epoch_langevin()
         
         print(

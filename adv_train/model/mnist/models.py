@@ -169,6 +169,7 @@ __mnist_model_dict__ = {
     MnistModel.MODEL_BBis: modelBBis,
     MnistModel.MODEL_C: modelC,
     MnistModel.MODEL_D: modelD,
+    MnistModel.MADRY_V2: MadryModel,
 }
 
 
