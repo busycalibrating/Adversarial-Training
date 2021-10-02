@@ -16,7 +16,7 @@ import tqdm
 import os
 import copy
 import subprocess
-from adv_train.utils.logger import Database
+from adv_train.utils.logger import Database, RecordState
 
 # Script to train a robust classifier.
 # Should support different ways of doing adversarial training.
@@ -163,7 +163,7 @@ class AdversarialTraining(Launcher):
         return total_err / len(self._dataset) * 100, total_loss / len(self._dataset)
 
     def launch(self):
-        db = Database()
+        db = Database(self.log_dir)
         self.record = db.create_record()
         self.record.save_hparams(self.args)
 
@@ -207,7 +207,7 @@ class AdversarialTraining(Launcher):
                 # would be nice to have a better interface for this !
                 attacker_args = copy.deepcopy(self.args)
                 attacker_args.attacker_type = self.eval_adv
-                attacker_args.nb_iter = 40
+                attacker_args.eps_iter = 0.01
                 self.eval_adv = Attacker.load_attacker(self.model, attacker_args)
 
             p = None

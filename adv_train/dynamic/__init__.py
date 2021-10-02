@@ -57,6 +57,7 @@ class Attacker(Enum):
             attacker = NoAttacker()
             attacker.projection = projection
             attacker.nb_iter = 0
+            attacker.name = "None"
         elif attacker_type == cls.FGSM:
             attacker = GradientSignAttack(
                 classifier,
@@ -67,6 +68,7 @@ class Attacker(Enum):
             )
             attacker.projection = projection
             attacker.nb_iter = 1
+            attacker.name = "fgsm"
         elif attacker_type == cls.PGD:
             attacker = LinfPGDAttack(
                 classifier,
@@ -79,6 +81,7 @@ class Attacker(Enum):
                 rand_init=False,
             )
             attacker.projection = projection
+            attacker.name = "pgd"
         elif attacker_type == cls.PGD_40:
             attacker = LinfPGDAttack(
                 classifier,
@@ -91,6 +94,7 @@ class Attacker(Enum):
                 rand_init=False,
             )
             attacker.projection = projection
+            attacker.name = "pgd-40"
         elif attacker_type == cls.PGD_100:
             attacker = LinfPGDAttack(
                 classifier,
@@ -103,6 +107,7 @@ class Attacker(Enum):
                 rand_init=False,
             )
             attacker.projection = projection
+            attacker.name = "pgd-100"
         elif attacker_type == cls.LANGEVIN:
             attacker = Langevin(
                 classifier,
@@ -113,5 +118,6 @@ class Attacker(Enum):
                 sign_flag=args.sign_flag,
                 noise_scale=args.noise_scale,
             )
+            attacker.name = "langevin"
 
         return attacker

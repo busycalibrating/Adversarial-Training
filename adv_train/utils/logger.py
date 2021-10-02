@@ -7,37 +7,52 @@ from adv_train.model import load_classifier
 import pickle
 from collections import defaultdict
 from enum import Enum
+import pandas as pd
 
 
 class Database():
     def __init__(self, log_dir="./logs"):
-        self.log_dir = "./logs"
+        self.log_dir = log_dir
         os.makedirs(self.log_dir, exist_ok=True)
-        self.load_all_records()
 
     def create_record(self):
-        _id = self._generate_uuid()
+        _id = str(uuid.uuid4())
         record = Record(self, _id)
-        self.list_records[_id] = record
+        record.set_state(RecordState.RUNNING)
         return record
 
-    def _generate_uuid(self):
-        while True:
-            _id = str(uuid.uuid4())
-            if _id not in self.list_records:
-                break
-        return _id 
-
     def load_all_records(self):
-        self.list_records = {}
+        list_records = {}
         list_id = os.listdir(self.log_dir)
         for _id in list_id:
             record = Record(self, _id)
-            self.list_records[_id] = record
+            list_records[_id] = record
+        return list_records
 
     def load_record(self, id):
         record = Record(self, id)
         return record
+
+    def reset_state(self, state):
+        all_records = self.load_all_records()
+        for _id, record in all_records.items():
+            state = record.get_state()
+            if state == state:
+                record.set_state(RecordState.COMPLETED)
+
+    def extract_to_df(self):
+        all_records = self.load_all_records()
+        results = defaultdict(list)
+        for _id, record in all_records.items():
+            state = record.get_state()
+            if state == RecordState.EVAL_DONE:
+                for key, value in record.load_eval().items():
+                    results[key].append(value)
+                for key, value in record.load_hparams().items():
+                    results[key].append(value)
+                    
+        df = pd.DataFrame.from_dict(results)
+        return df
 
 
 class RecordState(Enum):
@@ -45,6 +60,8 @@ class RecordState(Enum):
     FAILED = "failed"
     COMPLETED = "completed"
     EVAL_DONE = "eval_done"
+    EVAL_RUNNING = "eval_running"
+    EVAL_WAITING = "eval_waiting"
 
 
 class Record():
@@ -53,7 +70,6 @@ class Record():
         self.path = os.path.join(db.log_dir, self.id)
         os.makedirs(self.path, exist_ok=True)
         self.load()
-        self.set_state(RecordState.RUNNING)
 
     def set_state(self, state):
         filename = os.path.join(self.path, ".STATE")
@@ -101,10 +117,25 @@ class Record():
         for key, value in results.items():
             self.results[key].append(value)
 
+    def _save(self, results, filename):
+        with open(filename, "w") as f:
+            json.dump(results, f, indent=1)
+
     def save(self):
         filename = os.path.join(self.path, "results.json")
-        with open(filename, "w") as f:
-            json.dump(self.results, f, indent=1)
+        self._save(self.results, filename)
+
+    def save_eval(self, results):
+        filename = os.path.join(self.path, "eval.json")
+        self._save(results, filename)
+        self.set_state(RecordState.EVAL_DONE)
+
+    def load_eval(self):
+        results = defaultdict(list)
+        filename = os.path.join(self.path, "eval.json")
+        with open(filename, "r") as f:
+            results = json.load(f)
+        return results
 
     def load(self):
         self.load_hparams()
@@ -116,16 +147,18 @@ class Record():
         self.results = results
 
     def load_model(self, device=None, eval=True):
-        filename = os.path.join(self.path, "hparams.json")
+        filename = os.path.join(self.path, "model.pth")
         
         if self.hparams is None:
             self.haparams = self.load_hparams()
         
-        self.model = load_classifier(
-            self.hparams.dataset,
-            self.hparams.type,
+        model = load_classifier(
+            self.hparams["dataset"],
+            self.hparams["type"],
             model_path=filename,
             device=device,
             eval=eval,
         )
+
+        return model
 

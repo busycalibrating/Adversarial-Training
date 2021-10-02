@@ -12,13 +12,13 @@ if __name__ == "__main__":
 
     for i in range(args.n_runs):
         if args.dataset == DatasetType.MNIST:
-            args.type = random.choice([MnistModel.MODEL_A, MnistModel.MODEL_B, MnistModel.MODEL_C, MnistModel.MODEL_D, MnistModel.MADRY_V2])
+            args.type = MnistModel.MODEL_A
 
         elif args.dataset == DatasetType.CIFAR:
             args.type = random.choice(list(CifarModel))
 
-        args.lr = 10**np.random.uniform(-1, -3)
-        args.eps_iter = 10**np.random.uniform(-1, -3)
+        args.lr = 10**np.random.uniform(-1, -2.5)
+        args.eps_iter = 10**np.random.uniform(-1, -2.3)
         args.attacker_type = Attacker.PGD_40
         args.restart = True 
         args.sign_flag = True
@@ -29,7 +29,7 @@ if __name__ == "__main__":
         args.restart = False
         args.attacker_type = Attacker.LANGEVIN
         args.nb_iter = 1
-        args.noise_scale = 10**np.random.uniform(-2, 0)
+        args.noise_scale = 10**np.random.uniform(-3, -0.2)
 
         adv_train.update_args(args)
         adv_train.run()

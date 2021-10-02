@@ -33,34 +33,44 @@ class Launcher:
     def __init__(self, args):
         self.args = args
         self.__dict__.update(vars(args))
+        self.record = None
         
         if self.slurm is SlurmPartition.LOCAL:
             self.executor = None
         else:
-            import submitit
-
+            
             slurm_config = SlurmPartition.load(self.slurm)
-            nb_gpus = slurm_config.get("gpus_per_node", 1)
-            mem_by_gpu = slurm_config.get("mem_by_gpu", 60)
-            log_folder = slurm_config["log_folder"]
+            self.executor = self.create_slurm_executor(slurm_config)
 
-            self.executor = submitit.AutoExecutor(folder=log_folder)
-            self.executor.update_parameters(
-                slurm_partition=slurm_config.get("partition", ""),
-                slurm_comment=slurm_config.get("comment", ""),
-                slurm_constraint=slurm_config.get("gpu_type", ""),
-                slurm_time=slurm_config.get("time_in_min", 30),
-                timeout_min=slurm_config.get("time_in_min", 30),
-                nodes=slurm_config.get("nodes", 1),
-                cpus_per_task=slurm_config.get("cpus_per_task", 10),
-                tasks_per_node=nb_gpus,
-                gpus_per_node=nb_gpus,
-                mem_gb=mem_by_gpu * nb_gpus,
-                slurm_array_parallelism=slurm_config.get("slurm_array_parallelism", 100),
-            )     
+    @staticmethod
+    def create_slurm_executor(slurm_config):
+        import submitit
+        nb_gpus = slurm_config.get("gpus_per_node", 1)
+        mem_by_gpu = slurm_config.get("mem_by_gpu", 60)
+        log_folder = slurm_config["log_folder"]
+
+        executor = submitit.AutoExecutor(folder=log_folder)
+        executor.update_parameters(
+            slurm_partition=slurm_config.get("partition", ""),
+            slurm_comment=slurm_config.get("comment", ""),
+            slurm_constraint=slurm_config.get("gpu_type", ""),
+            slurm_time=slurm_config.get("time_in_min", 30),
+            timeout_min=slurm_config.get("time_in_min", 30),
+            nodes=slurm_config.get("nodes", 1),
+            cpus_per_task=slurm_config.get("cpus_per_task", 10),
+            tasks_per_node=nb_gpus,
+            gpus_per_node=nb_gpus,
+            mem_gb=mem_by_gpu * nb_gpus,
+            slurm_array_parallelism=slurm_config.get("slurm_array_parallelism", 100),
+        )
+        
+        return executor    
 
     def launch():
         raise NotImplementedError
+
+    def load(self, record):
+        self.record = record
 
     def update_args(self, args):
         self.args = args
@@ -72,6 +82,8 @@ class Launcher:
         else:
             job = self.executor.submit(self.launch)
             print("Launched job: %s"%(str(job.job_id)))
+
+
 
 
 
