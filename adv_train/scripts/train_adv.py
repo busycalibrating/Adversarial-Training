@@ -92,7 +92,6 @@ class AdversarialTraining(Launcher):
     def epoch_adversarial_lan(self):
         """Adversarial training/evaluation epoch over the dataset"""
         total_loss, total_err = 0.0, 0.0
-        num_grad = 0
         for x, y, x_adv, idx in tqdm.tqdm(self.dataloader):
             x, x_adv, y = (
                 x.to(self.device),
@@ -103,7 +102,7 @@ class AdversarialTraining(Launcher):
             x_adv = self.attacker.perturb(x_adv, y)
             x_adv = self.attacker.projection(x_adv, x)
 
-            num_grad += self.attacker.nb_iter*len(x)
+            self.num_grad += self.attacker.nb_iter*len(x)
 
             if not self.attacker.projection.is_valid(x, x_adv):
                 raise ValueError()
@@ -117,7 +116,7 @@ class AdversarialTraining(Launcher):
             loss.backward()
             self.opt.step()
 
-            num_grad += len(x)
+            self.num_grad += len(x)
 
             total_err += (pred.max(dim=1)[1] != y).sum().item()
             total_loss += loss.item()
@@ -168,6 +167,7 @@ class AdversarialTraining(Launcher):
         self.record.save_hparams(self.args)
 
         try:
+            self.num_grad = 0
             torch.manual_seed(1234)
             self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -231,7 +231,7 @@ class AdversarialTraining(Launcher):
                 )  # TODO: Replace this with a Logger interface
 
                 self.record.add({"epoch": epoch, "train_err": train_err, "train_loss": train_loss, "attacker_err": attacker_err,
-                                 "clean_err": clean_err, "adv_err": adv_err, "num_grad": num_grad})
+                                 "clean_err": clean_err, "adv_err": adv_err, "num_grad": self.num_grad})
 
                 if self.save_model is not None:
                     os.makedirs(os.path.dirname(self.save_model), exist_ok=True)

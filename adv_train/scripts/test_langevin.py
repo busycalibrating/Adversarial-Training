@@ -134,7 +134,7 @@ class LangevinAttack(Launcher):
                     train_err, train_loss = self.epoch_langevin(attacker)
                 
                 print(
-                    "Train error: %.2f%%,  Train Loss: %.4f" % (train_err * 100, train_loss)
+                    "(%s) error: %.2f%%,  Loss: %.4f" % (attacker.name, train_err * 100, train_loss)
                 )  # TODO: Replace this with a Logger interface
                 
                 results[attacker.name] = train_err

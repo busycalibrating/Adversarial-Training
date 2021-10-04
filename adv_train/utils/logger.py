@@ -145,6 +145,7 @@ class Record():
             with open(filename, "r") as f:
                 results = json.load(f)
         self.results = results
+        return results
 
     def load_model(self, device=None, eval=True):
         filename = os.path.join(self.path, "model.pth")
