@@ -12,9 +12,6 @@ where -d specifies the folder where to save the models.
 ## 1. To test the Langevin dynamic on a classifier:
 `python -m adv_train.scripts.test_langevin --nb_iter 10 --eps_iter 0.01 --noise_scale 0.4 --sign_flag --model_dir /home/mila/b/berardhu/share/AdversarialTraining/pretrained_models`
 
-By default this should achieve around 98% error.
-To be able to run this command you need to have access to `/home/mila/b/berardhu/share/AdversarialTraining/pretrained_models` on the mila cluster. Let me know if you don't have access to it !
-
 To change the model against which you want to evaluate the attacker simply use the flag: `--name train_0`.
 
 -------------------------
@@ -23,7 +20,7 @@ To change the model against which you want to evaluate the attacker simply use t
 
 This will train a classifier using langevin. It will also report the performance of the classifier against a PGD attacker.
 
-To evaluate the attacker against another model simply use the flag: `--eval_name train_0`. This requires to have access to `/home/mila/b/berardhu/share/AdversarialTraining/pretrained_models` on the mila cluster. Let me know if you don't have access to it !
+To evaluate the attacker against another model simply use the flag: `--eval_name train_0`.
 
 --------------------
 ## 3. To train a robust classifier using PGD:
@@ -35,8 +32,6 @@ You just need to add the  options `--restart` and `--attacker pgd`:
 ## 4. To test the robust classifier against PGD:
 `python -m adv_train.scripts.test_langevin --nb_iter 100 --eps_iter 0.01 --n_epochs 1 --attacker_type pgd --model_path /home/mila/b/berardhu/share/AdversarialTraining/saved_model/model_new.pt`
 
-I'm saving new models under the folder `/home/mila/b/berardhu/share/AdversarialTraining/saved_model/`. Let me know if you don't have access to it.
-
 --------------------------
 # 5. To test a classifier against FGSM, PGD-40 and PGD-100
 `./adv_train/scripts/test_all.sh /home/mila/b/berardhu/share/AdversarialTraining/saved_model/model_new.pt`
@@ -45,16 +40,3 @@ I'm saving new models under the folder `/home/mila/b/berardhu/share/AdversarialT
 ## Baselines
 
 Example of command: `python -m adv_train.scripts.test_langevin --nb_iter 100 --n_epochs 1 --eps_iter 0.01 --name PGD_ATTACK_train_0 --attacker_type pgd`
-
-|   Model A: PGD_ATTACK_train_0                | nb_iter | eps_iter | noise_scale | Training Error | Time   |
-|:--------------------------------------------:|:-------:|:--------:|:-----------:|:--------------:|:------:|
-| PGD                                          | 100     | 0.2      |             | 31.85%         | 3min32 |
-| Langevin (sign_flag = True, noise_type = normal)  | 100     | 0.2      | 0.1         | 34.63%         | 3min27 |
-| Langevin (sign_flag = True, noise_type = uniform) | 100     | 0.2      | 0.2         | 33.00%         | 3min27 |
-| Langevin (sign_flag = True, noise_type = uniform) | 100     | 0.2      | 0.1         | 33.00%         | 3min27 |
-
-
-|   Model A trained with Langevin              | nb_iter | eps_iter | noise_scale | Training Error | Time   |
-|:--------------------------------------------:|:-------:|:--------:|:-----------:|:--------------:|:------:|
-| PGD                                          | 100     | 0.1      |             | 4.40%          | 3min32 |
-
