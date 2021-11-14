@@ -28,5 +28,6 @@ setuptools.setup(
         'tqdm',
         'omegaconf',
         'torchvision',
+        'auto-attack @ git+https://github.com/fra31/auto-attack#egg=auto-attack'
       ],
 )
