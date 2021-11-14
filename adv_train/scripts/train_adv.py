@@ -124,7 +124,7 @@ class AdversarialTraining(Launcher):
             if self.restart:
                 continue
             self._dataset.update_adv(x_adv, idx)
-        return total_err / len(self._dataset) * 100, total_loss / len(self._dataset), num_grad
+        return total_err / len(self._dataset) * 100, total_loss / len(self._dataset)
 
     def _eval(self, x, y, model=None, attacker=None):
         x, y = x.to(self.device), y.to(self.device).long()
@@ -212,7 +212,7 @@ class AdversarialTraining(Launcher):
 
             p = None
             for epoch in range(self.n_epochs):
-                train_err, train_loss, num_grad = self.epoch_adversarial_lan()
+                train_err, train_loss = self.epoch_adversarial_lan()
                 attacker_err = 0.0
                 if self.model_eval is not None:
                     attacker_err, _ = self.eval_attacker()
