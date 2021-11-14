@@ -145,7 +145,8 @@ class LangevinAttack(Launcher):
                 self.record.set_state(RecordState.RUNNING)
             raise
 
-        self.record.save_eval(results)
+        if self.record is not None:
+            self.record.save_eval(results)
 
 
 if __name__ == "__main__":
