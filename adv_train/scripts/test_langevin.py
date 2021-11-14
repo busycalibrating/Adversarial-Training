@@ -98,7 +98,8 @@ class LangevinAttack(Launcher):
         self._attacker = attacker
 
     def launch(self, attacker=None):
-        self.record.set_state(RecordState.EVAL_RUNNING)
+        if self.record is not None:
+            self.record.set_state(RecordState.EVAL_RUNNING)
         try:
             torch.manual_seed(1234)
             self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -140,7 +141,8 @@ class LangevinAttack(Launcher):
                 results[attacker.name] = train_err
         
         except:
-            self.record.set_state(RecordState.RUNNING)
+            if self.record is not None:
+                self.record.set_state(RecordState.RUNNING)
             raise
 
         self.record.save_eval(results)
