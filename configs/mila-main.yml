@@ -1,0 +1,7 @@
+comment: ''
+log_folder: ~/logs/AdversarialTraining
+partition: main
+nodes: 1
+gpus_per_node: 1
+cpus_per_task: 4
+time_in_min: 1440

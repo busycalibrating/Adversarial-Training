@@ -13,6 +13,9 @@ class SlurmPartition(Enum):
     LOCAL = "local"
     DEVFAIR = "devfair"
     LEARNFAIR = "learnfair"
+    MILA_LONG = "mila-long"
+    MILA_MAIN = "mila-main"
+    MILA_UNKILLABLE = "mila-unkillable"
 
     @staticmethod
     def load(name):
