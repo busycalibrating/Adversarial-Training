@@ -1,3 +1,16 @@
+import copy
+import logging
+import os
+import subprocess
+import tqdm
+import wandb
+
+# Pytorch stuff
+import torch
+import torch.optim as optim
+import torch.nn as nn
+from torch.utils.data import DataLoader
+
 from adv_train.launcher import Launcher
 from adv_train.model import (
     DatasetType,
@@ -8,15 +21,9 @@ from adv_train.model import (
 )
 from adv_train.dynamic import Attacker
 from adv_train.dataset import AdversarialDataset
-import torch
-import torch.optim as optim
-import torch.nn as nn
-from torch.utils.data import DataLoader
-import tqdm
-import os
-import copy
-import subprocess
+
 from adv_train.utils.logger import Database, RecordState
+from adv_train.utils.wandb import WandB
 
 # Script to train a robust classifier.
 # Should support different ways of doing adversarial training.
@@ -24,11 +31,15 @@ from adv_train.utils.logger import Database, RecordState
 # TODO: Would be nice to change the args parsing,
 # so that the argument is automatically added to class !
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 class AdversarialTraining(Launcher):
     @classmethod
     def add_argument(cls, parser=None):
         parser = super().add_arguments(parser)
+        parser = WandB.add_arguments(parser)
 
         parser.add_argument(
             "--dataset",
@@ -36,6 +47,24 @@ class AdversarialTraining(Launcher):
             type=DatasetType,
             choices=DatasetType,
         )
+
+        parser.add_argument("--lr", default=0.1, type=float)
+        parser.add_argument("--n_epochs", default=10, type=int)
+        parser.add_argument("--batch_size", default=100, type=int)
+        parser.add_argument("--save_model", default=None, type=str)
+        parser.add_argument(
+            "--model_dir",
+            default=os.path.join(os.environ.get("SCRATCH", "~"), "2022/adversarial_training_checkpoints"),
+            type=str,
+        )
+        parser.add_argument("--eval_name", default=None, type=str)
+        parser.add_argument("--eval_clean_flag", action="store_true")
+        parser.add_argument("--eval_adv", default=None, type=Attacker, choices=Attacker)
+        parser.add_argument("--dest", default=None, type=str, help="An additional save destination for the final model file")
+        parser.add_argument("--train_on_clean", action="store_true")
+        parser.add_argument("--n_adv", default=1, type=int)
+        parser.add_argument("--restart", action="store_true")
+        parser.add_argument("--log_dir", default="./logs", type=str)
 
         args, _ = parser.parse_known_args()
 
@@ -54,29 +83,33 @@ class AdversarialTraining(Launcher):
                 type=CifarModel,
                 choices=CifarModel,
             )
-
-        parser.add_argument("--lr", default=0.1, type=float)
-        parser.add_argument("--n_epochs", default=10, type=int)
-        parser.add_argument("--batch_size", default=100, type=int)
-        parser.add_argument("--save_model", default=None, type=str)
-        parser.add_argument(
-            "--model_dir",
-            default="/checkpoint/hberard/OnlineAttack/pretained_models",
-            type=str,
-        )
-        parser.add_argument("--eval_name", default=None, type=str)
-        parser.add_argument("--eval_clean_flag", action="store_true")
-        parser.add_argument("--eval_adv", default=None, type=Attacker, choices=Attacker)
-        parser.add_argument("--dest", default=None, type=str)
-        parser.add_argument("--train_on_clean", action="store_true")
-        parser.add_argument("--n_adv", default=1, type=int)
-        parser.add_argument("--restart", action="store_true")
-        parser.add_argument("--log_dir", default="./logs", type=str)
+        # TODO: add ImageNet stuff here
 
         return parser
+        
 
     def __init__(self, args):
         super().__init__(args)
+
+        # wandb stuff 
+        self.run = None
+        if args.wandb_project is not None:
+            # TODO: wandb
+            logger.info(f"Logging to Weights and Biases")
+            logger.info(f"Project:\t{args.wandb_project}")
+            logger.info(f"Entity:\t{args.wandb_entity}")
+            logger.info(f"Name:\t{args.wandb_name}")
+            logger.info(f"Group:\t{args.wandb_group}")
+            # if kwargs is not None:
+                # logger.info(f"Additional kwargs:\t{kwargs}")
+
+            self.run = wandb.init(
+                name=args.wandb_name, 
+                entity=args.wandb_entity, 
+                project=args.wandb_project, 
+                group=args.wandb_group
+            )
+            wandb.config.update(args)
 
     def forward(self, x, y, model=None, return_pred=False):
         if model is None:
@@ -123,7 +156,9 @@ class AdversarialTraining(Launcher):
 
             if self.restart:
                 continue
+
             self._dataset.update_adv(x_adv, idx)
+
         return total_err / len(self._dataset) * 100, total_loss / len(self._dataset)
 
     def _eval(self, x, y, model=None, attacker=None):
