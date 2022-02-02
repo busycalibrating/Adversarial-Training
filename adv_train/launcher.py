@@ -62,7 +62,7 @@ class Launcher:
         executor.update_parameters(
             slurm_partition=slurm_config.get("partition", ""),
             slurm_comment=slurm_config.get("comment", ""),
-            slurm_constraint=slurm_config.get("gpu_type", ""),
+            # slurm_constraint=slurm_config.get("gpu_type", ""),
             slurm_time=slurm_config.get("time_in_min", 30),
             timeout_min=slurm_config.get("time_in_min", 30),
             nodes=slurm_config.get("nodes", 1),
@@ -72,6 +72,9 @@ class Launcher:
             mem_gb=mem_by_gpu * nb_gpus,
             slurm_array_parallelism=slurm_config.get("slurm_array_parallelism", 100),
         )
+
+        # doesn't work otherwise..?
+        executor.update_parameters(slurm_gres=slurm_config.get("slurm_gres", None))
         
         return executor    
 

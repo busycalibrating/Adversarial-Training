@@ -58,22 +58,16 @@ class AdversarialTraining(Launcher):
         parser.add_argument("--n_epochs", default=10, type=int, help="Number of training epochs")
         parser.add_argument("--batch_size", default=128, type=int, help="Batch size")
         parser.add_argument(
-            "--save_model", 
-            default=None, 
-            type=str, 
-            help="If specified, path to where a model is saved every epoch"
-        )
-        parser.add_argument(
-            "--model_dir",
+            "--save_model",
             default=None,
             type=str,
-            help="Where to load models from (?)"
+            help="If specified, path to where a model is saved every epoch",
         )
         parser.add_argument(
-            "--eval_name", 
-            default=None, 
-            type=str, 
-            help="Evaluates against another trained model(?)"
+            "--model_dir", default=None, type=str, help="Where to load models from (?)"
+        )
+        parser.add_argument(
+            "--eval_name", default=None, type=str, help="Evaluates against another trained model(?)"
         )
         parser.add_argument("--eval_clean_flag", action="store_true", help="")
         parser.add_argument("--eval_adv", default=None, type=Attacker, choices=Attacker, help="")
@@ -87,7 +81,11 @@ class AdversarialTraining(Launcher):
         parser.add_argument("--n_adv", default=1, type=int, help="")
         parser.add_argument("--restart", action="store_true", help="")
         parser.add_argument("--log_dir", default="./logs", type=str, help="")
-        parser.add_argument("--fancy_db_name", action="store_true", help="If enabled, instead of creating a db entry in log_dir/<uuid>, creates an entry in logdir/<wandb_group>/<date>_")
+        parser.add_argument(
+            "--fancy_db_name",
+            action="store_true",
+            help="If enabled, instead of creating a db entry in log_dir/<uuid>, creates an entry in logdir/<wandb_group>/<date>_",
+        )
 
         args, _ = parser.parse_known_args()
 
@@ -97,7 +95,7 @@ class AdversarialTraining(Launcher):
                 default=MnistModel.MODEL_A,
                 type=MnistModel,
                 choices=MnistModel,
-                help="MNIST model types"
+                help="MNIST model types",
             )
 
         elif args.dataset == DatasetType.CIFAR:
@@ -106,7 +104,7 @@ class AdversarialTraining(Launcher):
                 default=CifarModel.RESNET_18,
                 type=CifarModel,
                 choices=CifarModel,
-                help="CIFAR model types"
+                help="CIFAR model types",
             )
         # TODO: add ImageNet stuff here
 
@@ -134,7 +132,7 @@ class AdversarialTraining(Launcher):
                 group=args.wandb_group,
             )
             wandb.config.update(args)
-        
+
         # TODO: hacky, fix this later
         self.db_record_name = None
         if args.fancy_db_name:
@@ -194,7 +192,7 @@ class AdversarialTraining(Launcher):
             if self.restart:
                 continue
 
-            # TODO: will need to update this for imagenet 
+            # TODO: will need to update this for imagenet
             self._dataset.update_adv(x_adv, idx)
 
         return total_err / len(self._dataset) * 100, total_loss / len(self._dataset)
@@ -289,7 +287,9 @@ class AdversarialTraining(Launcher):
                 train_err, train_loss = self.epoch_adversarial_lan()
                 end.record()
                 torch.cuda.synchronize()  # waits for everything to finish running
-                train_time = start.elapsed_time(end) / 1000  # Event.elapsed_time(...) returns milliseconds
+                train_time = (
+                    start.elapsed_time(end) / 1000
+                )  # Event.elapsed_time(...) returns milliseconds
 
                 attacker_err = -1.0
                 if self.model_eval is not None:
@@ -304,7 +304,7 @@ class AdversarialTraining(Launcher):
                     adv_err, _ = self.eval(attacker=self.eval_adv)
 
                 logger.info(
-                    "Iter: %i, Train time: %.2f%%,Train error: %.2f%%,  Train Loss: %.4f, Attacker error: %.2f%%, Clean error: %.2f%%, Adversarial error: %.2f%%"
+                    "Iter: %i, Train time: %.2f%s, Train error: %.2f%%,  Train Loss: %.4f, Attacker error: %.2f%%, Clean error: %.2f%%, Adversarial error: %.2f%%"
                     % (epoch, train_time, train_err, train_loss, attacker_err, clean_err, adv_err)
                 )  # TODO: Replace this with a Logger interface
 
@@ -337,6 +337,14 @@ class AdversarialTraining(Launcher):
                 else:
                     self.record.save_model(self.model)
             self.record.close()
+            if self.wandb_run is not None:
+                model_filepath = (
+                    self.save_model if self.save_model is not None else self.record.model_filepath
+                )
+                artifact = wandb.Artifact("model", type="model")
+                artifact.add_file(model_filepath)
+                self.wandb_run.log_artifact(artifact)
+                self.wandb_run.finish()
 
         except:
             self.record.fail()

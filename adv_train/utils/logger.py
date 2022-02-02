@@ -69,6 +69,10 @@ class Record():
     def __init__(self, db, id):
         self.id = id
         self.path = os.path.join(db.log_dir, self.id)
+
+        self.hparams_filepath = os.path.join(self.path, "hparams.pkl")
+        self.model_filepath = os.path.join(self.path, "model.pth")
+
         os.makedirs(self.path, exist_ok=True)
         self.load()
 
@@ -95,7 +99,7 @@ class Record():
     def save_hparams(self, hparams):
         if isinstance(hparams, Namespace):
             hparams = vars(hparams) 
-        filename = os.path.join(self.path, "hparams.pkl")
+        filename = self.hparams_filepath
         with open(filename, "wb") as f:
             pickle.dump(hparams, f)
             f.flush()
@@ -103,7 +107,7 @@ class Record():
 
     def load_hparams(self):
         hparams = None
-        filename = os.path.join(self.path, "hparams.pkl")
+        filename = self.hparams_filepath
         if os.path.exists(filename):
             with open(filename, "rb") as f:
                 hparams = pickle.load(f)
@@ -111,8 +115,7 @@ class Record():
         return hparams
 
     def save_model(self, model):
-        filename = os.path.join(self.path, "model.pth")
-        torch.save(model.state_dict(), filename)
+        torch.save(model.state_dict(), self.model_filepath)
 
     def add(self, results):
         for key, value in results.items():
@@ -149,7 +152,7 @@ class Record():
         return results
 
     def load_model(self, device=None, eval=True):
-        filename = os.path.join(self.path, "model.pth")
+        filename = self.model_filepath
         
         if self.hparams is None:
             self.haparams = self.load_hparams()

@@ -3,6 +3,7 @@ log_folder: ~/logs/AdversarialTraining
 partition: long
 nodes: 1
 gpus_per_node: 1
+slurm_gres: 'gpu:rtx8000:1'
 cpus_per_task: 4
 time_in_min: 1440
 mem_by_gpu: 24
