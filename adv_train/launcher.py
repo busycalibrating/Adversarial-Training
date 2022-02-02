@@ -27,9 +27,15 @@ class Launcher:
     @classmethod
     def add_arguments(cls, parser=None):
         if parser is None:
-            parser = argparse.ArgumentParser()
+            parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-        parser.add_argument("--slurm", default=SlurmPartition.LOCAL, type=SlurmPartition, choices=SlurmPartition)
+        parser.add_argument(
+            "--slurm", 
+            default=SlurmPartition.LOCAL, 
+            type=SlurmPartition, 
+            choices=SlurmPartition, 
+            help="Select slurm partition; specify config in the relevant config file!"
+        )
 
         return parser
 

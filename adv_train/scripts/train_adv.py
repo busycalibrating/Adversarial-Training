@@ -1,15 +1,21 @@
+import argparse
 import copy
 import logging
 import os
+import pprint
 import subprocess
+import time
 import tqdm
+import uuid
 import wandb
+
 
 # Pytorch stuff
 import torch
 import torch.optim as optim
 import torch.nn as nn
 from torch.utils.data import DataLoader
+import torch.cuda as cuda
 
 from adv_train.launcher import Launcher
 from adv_train.model import (
@@ -47,24 +53,41 @@ class AdversarialTraining(Launcher):
             type=DatasetType,
             choices=DatasetType,
         )
-
-        parser.add_argument("--lr", default=0.1, type=float)
-        parser.add_argument("--n_epochs", default=10, type=int)
-        parser.add_argument("--batch_size", default=100, type=int)
-        parser.add_argument("--save_model", default=None, type=str)
+        parser.add_argument("--seed", default=42, type=int, help="Random seed")
+        parser.add_argument("--lr", default=0.1, type=float, help="Learning rate")
+        parser.add_argument("--n_epochs", default=10, type=int, help="Number of training epochs")
+        parser.add_argument("--batch_size", default=128, type=int, help="Batch size")
+        parser.add_argument(
+            "--save_model", 
+            default=None, 
+            type=str, 
+            help="If specified, path to where a model is saved every epoch"
+        )
         parser.add_argument(
             "--model_dir",
-            default=os.path.join(os.environ.get("SCRATCH", "~"), "2022/adversarial_training_checkpoints"),
+            default=None,
             type=str,
+            help="Where to load models from (?)"
         )
-        parser.add_argument("--eval_name", default=None, type=str)
-        parser.add_argument("--eval_clean_flag", action="store_true")
-        parser.add_argument("--eval_adv", default=None, type=Attacker, choices=Attacker)
-        parser.add_argument("--dest", default=None, type=str, help="An additional save destination for the final model file")
-        parser.add_argument("--train_on_clean", action="store_true")
-        parser.add_argument("--n_adv", default=1, type=int)
-        parser.add_argument("--restart", action="store_true")
-        parser.add_argument("--log_dir", default="./logs", type=str)
+        parser.add_argument(
+            "--eval_name", 
+            default=None, 
+            type=str, 
+            help="Evaluates against another trained model(?)"
+        )
+        parser.add_argument("--eval_clean_flag", action="store_true", help="")
+        parser.add_argument("--eval_adv", default=None, type=Attacker, choices=Attacker, help="")
+        parser.add_argument(
+            "--dest",
+            default=None,
+            type=str,
+            help="An additional save destination for the final model file",
+        )
+        parser.add_argument("--train_on_clean", action="store_true", help="")
+        parser.add_argument("--n_adv", default=1, type=int, help="")
+        parser.add_argument("--restart", action="store_true", help="")
+        parser.add_argument("--log_dir", default="./logs", type=str, help="")
+        parser.add_argument("--fancy_db_name", action="store_true", help="If enabled, instead of creating a db entry in log_dir/<uuid>, creates an entry in logdir/<wandb_group>/<date>_")
 
         args, _ = parser.parse_known_args()
 
@@ -74,6 +97,7 @@ class AdversarialTraining(Launcher):
                 default=MnistModel.MODEL_A,
                 type=MnistModel,
                 choices=MnistModel,
+                help="MNIST model types"
             )
 
         elif args.dataset == DatasetType.CIFAR:
@@ -82,17 +106,17 @@ class AdversarialTraining(Launcher):
                 default=CifarModel.RESNET_18,
                 type=CifarModel,
                 choices=CifarModel,
+                help="CIFAR model types"
             )
         # TODO: add ImageNet stuff here
 
         return parser
-        
 
     def __init__(self, args):
         super().__init__(args)
 
-        # wandb stuff 
-        self.run = None
+        # wandb stuff
+        self.wandb_run = None
         if args.wandb_project is not None:
             # TODO: wandb
             logger.info(f"Logging to Weights and Biases")
@@ -101,15 +125,27 @@ class AdversarialTraining(Launcher):
             logger.info(f"Name:\t{args.wandb_name}")
             logger.info(f"Group:\t{args.wandb_group}")
             # if kwargs is not None:
-                # logger.info(f"Additional kwargs:\t{kwargs}")
+            # logger.info(f"Additional kwargs:\t{kwargs}")
 
-            self.run = wandb.init(
-                name=args.wandb_name, 
-                entity=args.wandb_entity, 
-                project=args.wandb_project, 
-                group=args.wandb_group
+            self.wandb_run = wandb.init(
+                name=args.wandb_name,
+                entity=args.wandb_entity,
+                project=args.wandb_project,
+                group=args.wandb_group,
             )
             wandb.config.update(args)
+        
+        # TODO: hacky, fix this later
+        self.db_record_name = None
+        if args.fancy_db_name:
+            if args.wandb_group is None:
+                raise RuntimeError(
+                    "Specified --fancy_db_entry without a --wandb_group (required). "
+                    "This won't log to WandB if you don't set --wandb_project"
+                )
+            self.log_dir = os.path.join(self.log_dir, args.wandb_group)
+            self.db_record_name = f'{time.strftime("%Y%m%d-%H%M%S")}__{str(uuid.uuid4())[:8]}'
+            logger.info(f"Logging to '{os.path.join(self.log_dir, self.db_record_name)}'")
 
     def forward(self, x, y, model=None, return_pred=False):
         if model is None:
@@ -135,7 +171,7 @@ class AdversarialTraining(Launcher):
             x_adv = self.attacker.perturb(x_adv, y)
             x_adv = self.attacker.projection(x_adv, x)
 
-            self.num_grad += self.attacker.nb_iter*len(x)
+            self.num_grad += self.attacker.nb_iter * len(x)
 
             if not self.attacker.projection.is_valid(x, x_adv):
                 raise ValueError()
@@ -143,6 +179,7 @@ class AdversarialTraining(Launcher):
             self.opt.zero_grad()
             loss, pred = self.forward(x_adv, y, return_pred=True)
 
+            # trains on both clean + adversarial examples
             if self.train_on_clean:
                 loss += self.forward(x, y, return_pred=False)
 
@@ -157,6 +194,7 @@ class AdversarialTraining(Launcher):
             if self.restart:
                 continue
 
+            # TODO: will need to update this for imagenet 
             self._dataset.update_adv(x_adv, idx)
 
         return total_err / len(self._dataset) * 100, total_loss / len(self._dataset)
@@ -198,12 +236,12 @@ class AdversarialTraining(Launcher):
 
     def launch(self):
         db = Database(self.log_dir)
-        self.record = db.create_record()
+        self.record = db.create_record(self.db_record_name)
         self.record.save_hparams(self.args)
 
         try:
             self.num_grad = 0
-            torch.manual_seed(1234)
+            torch.manual_seed(self.seed)
             self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
             dataset = load_dataset(self.dataset, train=True)
@@ -217,9 +255,7 @@ class AdversarialTraining(Launcher):
                 test_dataset, batch_size=self.batch_size, shuffle=False, num_workers=4
             )
 
-            self.model = load_classifier(
-                self.dataset, self.type, device=self.device, eval=False
-            )
+            self.model = load_classifier(self.dataset, self.type, device=self.device, eval=False)
 
             self.model_eval = None
             if self.eval_name is not None:
@@ -234,7 +270,6 @@ class AdversarialTraining(Launcher):
 
             self.opt = optim.SGD(self.model.parameters(), lr=self.lr)
             self.loss_fn = nn.CrossEntropyLoss()
-
             self.attacker = Attacker.load_attacker(self.model, self.args)
 
             if self.eval_adv is not None:
@@ -247,26 +282,45 @@ class AdversarialTraining(Launcher):
 
             p = None
             for epoch in range(self.n_epochs):
+
+                # train epoch; time the training using cuda Events
+                start, end = cuda.Event(enable_timing=True), cuda.Event(enable_timing=True)
+                start.record()
                 train_err, train_loss = self.epoch_adversarial_lan()
-                attacker_err = 0.0
+                end.record()
+                torch.cuda.synchronize()  # waits for everything to finish running
+                train_time = start.elapsed_time(end) / 1000  # Event.elapsed_time(...) returns milliseconds
+
+                attacker_err = -1.0
                 if self.model_eval is not None:
                     attacker_err, _ = self.eval_attacker()
 
-                clean_err = 0.0
+                clean_err = -1.0
                 if self.eval_clean_flag:
                     clean_err, _ = self.eval()
 
-                adv_err = 0.0
+                adv_err = -1.0
                 if self.eval_adv is not None:
                     adv_err, _ = self.eval(attacker=self.eval_adv)
 
-                print(
-                    "Iter: %i, Train error: %.2f%%,  Train Loss: %.4f, Attacker error: %.2f%%, Clean error: %.2f%%, Adversarial error: %.2f%%"
-                    % (epoch, train_err, train_loss, attacker_err, clean_err, adv_err)
+                logger.info(
+                    "Iter: %i, Train time: %.2f%%,Train error: %.2f%%,  Train Loss: %.4f, Attacker error: %.2f%%, Clean error: %.2f%%, Adversarial error: %.2f%%"
+                    % (epoch, train_time, train_err, train_loss, attacker_err, clean_err, adv_err)
                 )  # TODO: Replace this with a Logger interface
 
-                self.record.add({"epoch": epoch, "train_err": train_err, "train_loss": train_loss, "attacker_err": attacker_err,
-                                 "clean_err": clean_err, "adv_err": adv_err, "num_grad": self.num_grad})
+                log = {
+                    "epoch": epoch,
+                    "train_time": train_time,
+                    "train_err": train_err,
+                    "train_loss": train_loss,
+                    "attacker_err": attacker_err,
+                    "clean_err": clean_err,
+                    "adv_err": adv_err,
+                    "num_grad": self.num_grad,
+                }
+                self.record.add(log)
+                if self.wandb_run is not None:
+                    self.wandb_run.log(log)
 
                 if self.save_model is not None:
                     os.makedirs(os.path.dirname(self.save_model), exist_ok=True)
@@ -283,17 +337,18 @@ class AdversarialTraining(Launcher):
                 else:
                     self.record.save_model(self.model)
             self.record.close()
-        
+
         except:
             self.record.fail()
             raise
 
 
 if __name__ == "__main__":
-    parser = Attacker.add_arguments()
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = Attacker.add_arguments(parser)
     parser = AdversarialTraining.add_argument(parser)
-
     args = parser.parse_args()
+    logger.info(pprint.pformat(vars(args)))
 
     adv_train = AdversarialTraining(args)
     adv_train.run()

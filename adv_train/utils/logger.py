@@ -15,8 +15,9 @@ class Database():
         self.log_dir = log_dir
         os.makedirs(self.log_dir, exist_ok=True)
 
-    def create_record(self):
-        _id = str(uuid.uuid4())
+    def create_record(self, _id: str = None):
+        if _id is None:
+            _id = str(uuid.uuid4())
         record = Record(self, _id)
         record.set_state(RecordState.RUNNING)
         return record
