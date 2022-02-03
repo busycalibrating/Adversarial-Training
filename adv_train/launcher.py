@@ -59,22 +59,22 @@ class Launcher:
         log_folder = slurm_config["log_folder"]
 
         executor = submitit.AutoExecutor(folder=log_folder)
+
+        # TODO: commented out stuff that was breaking my submission - fix this later
         executor.update_parameters(
             slurm_partition=slurm_config.get("partition", ""),
             slurm_comment=slurm_config.get("comment", ""),
             # slurm_constraint=slurm_config.get("gpu_type", ""),
-            slurm_time=slurm_config.get("time_in_min", 30),
+            # slurm_time=slurm_config.get("time_in_min", 30),
+            slurm_gres=slurm_config.get("slurm_gres", None),
             timeout_min=slurm_config.get("time_in_min", 30),
-            nodes=slurm_config.get("nodes", 1),
+            # nodes=slurm_config.get("nodes", 1),
             cpus_per_task=slurm_config.get("cpus_per_task", 10),
-            tasks_per_node=nb_gpus,
-            gpus_per_node=nb_gpus,
+            # tasks_per_node=nb_gpus,
+            # gpus_per_node=nb_gpus,
             mem_gb=mem_by_gpu * nb_gpus,
-            slurm_array_parallelism=slurm_config.get("slurm_array_parallelism", 100),
+            slurm_array_parallelism=slurm_config.get("slurm_array_parallelism", None),
         )
-
-        # doesn't work otherwise..?
-        executor.update_parameters(slurm_gres=slurm_config.get("slurm_gres", None))
         
         return executor    
 

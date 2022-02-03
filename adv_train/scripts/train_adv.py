@@ -112,26 +112,7 @@ class AdversarialTraining(Launcher):
 
     def __init__(self, args):
         super().__init__(args)
-
-        # wandb stuff
         self.wandb_run = None
-        if args.wandb_project is not None:
-            # TODO: wandb
-            logger.info(f"Logging to Weights and Biases")
-            logger.info(f"Project:\t{args.wandb_project}")
-            logger.info(f"Entity:\t{args.wandb_entity}")
-            logger.info(f"Name:\t{args.wandb_name}")
-            logger.info(f"Group:\t{args.wandb_group}")
-            # if kwargs is not None:
-            # logger.info(f"Additional kwargs:\t{kwargs}")
-
-            self.wandb_run = wandb.init(
-                name=args.wandb_name,
-                entity=args.wandb_entity,
-                project=args.wandb_project,
-                group=args.wandb_group,
-            )
-            wandb.config.update(args)
 
         # TODO: hacky, fix this later
         self.db_record_name = None
@@ -144,6 +125,26 @@ class AdversarialTraining(Launcher):
             self.log_dir = os.path.join(self.log_dir, args.wandb_group)
             self.db_record_name = f'{time.strftime("%Y%m%d-%H%M%S")}__{str(uuid.uuid4())[:8]}'
             logger.info(f"Logging to '{os.path.join(self.log_dir, self.db_record_name)}'")
+
+    def init_wandb(self):
+        if self.wandb_project is not None:
+            logger.info(f"Logging to Weights and Biases")
+            logger.info(f"Project:\t{self.wandb_project}")
+            logger.info(f"Entity:\t{self.wandb_entity}")
+            logger.info(f"Name:\t{self.wandb_name}")
+            logger.info(f"Group:\t{self.wandb_group}")
+            # if kwargs is not None:
+            # logger.info(f"Additional kwargs:\t{kwargs}")
+
+            self.wandb_run = wandb.init(
+                name=self.wandb_name,
+                entity=self.wandb_entity,
+                project=self.wandb_project,
+                group=self.wandb_group,
+            )
+            wandb.config.update(self)
+        else:
+            logger.info(f"Weights and Biases not configured for this run")
 
     def forward(self, x, y, model=None, return_pred=False):
         if model is None:
@@ -233,6 +234,13 @@ class AdversarialTraining(Launcher):
         return total_err / len(self._dataset) * 100, total_loss / len(self._dataset)
 
     def launch(self):
+        # TODO: fix logging interface for submitit?
+        logging.basicConfig(level=logging.INFO)
+        logger = logging.getLogger(__name__)
+
+        self.init_wandb()
+        logger.info(f"Logging to '{os.path.join(self.log_dir, self.db_record_name)}'")
+
         db = Database(self.log_dir)
         self.record = db.create_record(self.db_record_name)
         self.record.save_hparams(self.args)
@@ -304,7 +312,7 @@ class AdversarialTraining(Launcher):
                     adv_err, _ = self.eval(attacker=self.eval_adv)
 
                 logger.info(
-                    "Iter: %i, Train time: %.2f%s, Train error: %.2f%%,  Train Loss: %.4f, Attacker error: %.2f%%, Clean error: %.2f%%, Adversarial error: %.2f%%"
+                    "Iter: %i, Train time: %.2fs, Train error: %.2f%%,  Train Loss: %.4f, Attacker error: %.2f%%, Clean error: %.2f%%, Adversarial error: %.2f%%"
                     % (epoch, train_time, train_err, train_loss, attacker_err, clean_err, adv_err)
                 )  # TODO: Replace this with a Logger interface
 
