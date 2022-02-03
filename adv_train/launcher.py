@@ -19,7 +19,7 @@ class SlurmPartition(Enum):
 
     @staticmethod
     def load(name):
-        filename = "./configs/%s.yml"%name.value
+        filename = "./configs/slurm/%s.yml"%name.value
         return OmegaConf.load(filename)
         
 

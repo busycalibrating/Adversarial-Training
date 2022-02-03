@@ -118,7 +118,7 @@ class AdversarialTraining(Launcher):
         self.db_record_name = None
         if args.fancy_db_name:
             if args.wandb_group is None:
-                raise RuntimeError(
+                raise RuntimeError# the following line tells the scheduler to only run\(
                     "Specified --fancy_db_entry without a --wandb_group (required). "
                     "This won't log to WandB if you don't set --wandb_project"
                 )
