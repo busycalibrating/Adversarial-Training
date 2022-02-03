@@ -1,0 +1,8 @@
+comment: ''
+log_folder: /checkpoint/hberard/log_runs
+partition: learnlab
+nodes: 1
+gpus_per_node: 1
+cpus_per_task: 5
+time_in_min: 600
+slurm_array_parallelism: 100

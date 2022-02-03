@@ -4,8 +4,8 @@ from adv_train.model import (
     DatasetType,
     MnistModel,
     CifarModel,
-    load_classifier,
     load_dataset,
+    load_classifier,
 )
 from adv_train.dynamic import Attacker
 from adv_train.dataset import AdversarialDataset
@@ -14,13 +14,13 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 import tqdm
+from adv_train.utils.logger import Database, RecordState
 
 
 class LangevinAttack(Launcher):
-    @staticmethod
-    def add_arguments(parser=None):
-        if parser is None:
-            parser = argparse.ArgumentParser()
+    @classmethod
+    def add_arguments(cls, parser=None):
+        parser = super().add_arguments(parser)
 
         parser.add_argument(
             "--dataset",
@@ -61,29 +61,8 @@ class LangevinAttack(Launcher):
         return parser
 
     def __init__(self, args):
-        torch.manual_seed(1234)
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-
-        dataset = load_dataset(args.dataset, train=False)
-        self.dataset = AdversarialDataset(dataset, n_adv=args.n_adv)
-        self.dataloader = DataLoader(
-            self.dataset, batch_size=args.batch_size, shuffle=True, num_workers=4
-        )
-
-        self.model = load_classifier(
-            args.dataset,
-            args.type,
-            model_path=args.model_path,
-            name=args.name,
-            model_dir=args.model_dir,
-            device=self.device,
-            eval=True,
-        )
-        self.loss_fn = nn.CrossEntropyLoss()
-
-        self.attacker = Attacker.load_attacker(self.model, args)
-
-        self.n_epochs = args.n_epochs
+        super().__init__(args)
+        self._attacker = [None]
 
     def forward(self, x, y, return_pred=False):
         pred = self.model(x)
@@ -92,7 +71,7 @@ class LangevinAttack(Launcher):
             return loss, pred
         return loss
 
-    def epoch_langevin(self):
+    def epoch_langevin(self, attacker):
         total_loss, total_err = 0.0, 0.0
         for x, y, x_adv, idx in tqdm.tqdm(self.dataloader):
             x, x_adv, y = (
@@ -101,10 +80,10 @@ class LangevinAttack(Launcher):
                 y.to(self.device).long(),
             )
 
-            x_adv = self.attacker.perturb(x_adv, y)
-            x_adv = self.attacker.projection(x_adv, x)
+            x_adv = attacker.perturb(x_adv, y)
+            x_adv = attacker.projection(x_adv, x)
 
-            if not self.attacker.projection.is_valid(x, x_adv):
+            if not attacker.projection.is_valid(x, x_adv):
                 raise ValueError()
 
             loss, pred = self.forward(x_adv, y, return_pred=True)
@@ -112,16 +91,62 @@ class LangevinAttack(Launcher):
             total_err += (pred.max(dim=1)[1] != y).sum().item()
             total_loss += loss.item()
 
-            self.dataset.update_adv(x_adv, idx)
-        return total_err / len(self.dataset), total_loss / len(self.dataset)
+            self._dataset.update_adv(x_adv, idx)
+        return total_err / len(self._dataset), total_loss / len(self._dataset)
 
-    def launch(self):
-        for _ in range(self.n_epochs):
-            train_err, train_loss = self.epoch_langevin()
+    def set_attacker(self, attacker):
+        self._attacker = attacker
+
+    def launch(self, attacker=None):
+        if self.record is not None:
+            self.record.set_state(RecordState.EVAL_RUNNING)
+        try:
+            torch.manual_seed(1234)
+            self.device = "cuda" if torch.cuda.is_available() else "cpu"
+
+            dataset = load_dataset(self.dataset, train=False)
+            self._dataset = AdversarialDataset(dataset, n_adv=self.n_adv)
+            self.dataloader = DataLoader(
+                self._dataset, batch_size=self.batch_size, shuffle=True, num_workers=4
+            )
+
+            if self.record is not None:
+                self.model = self.record.load_model(device=self.device, eval=True)
+            else:
+                self.model = load_classifier(
+                    self.dataset,
+                    self.type,
+                    model_path=self.model_path,
+                    name=self.name,
+                    model_dir=self.model_dir,
+                    device=self.device,
+                    eval=True,
+                )
+
+            self.loss_fn = nn.CrossEntropyLoss()
+
+            self.attacker = []
+            for attacker in self._attacker:
+                self.attacker.append(Attacker.load_attacker(self.model, self.args, attacker_type=attacker))
+
+            results = {}
+            for attacker in self.attacker:
+                for _ in range(self.n_epochs):
+                    train_err, train_loss = self.epoch_langevin(attacker)
+                
+                print(
+                    "(%s) error: %.2f%%,  Loss: %.4f" % (attacker.name, train_err * 100, train_loss)
+                )  # TODO: Replace this with a Logger interface
+                
+                results[attacker.name] = train_err
         
-        print(
-            "Train error: %.2f%%,  Train Loss: %.4f" % (train_err * 100, train_loss)
-        )  # TODO: Replace this with a Logger interface
+        except:
+            if self.record is not None:
+                self.record.set_state(RecordState.RUNNING)
+            raise
+
+        if self.record is not None:
+            self.record.save_eval(results)
 
 
 if __name__ == "__main__":
@@ -132,4 +157,4 @@ if __name__ == "__main__":
 
     torch.manual_seed(1234)
     attack = LangevinAttack(args)
-    attack.launch()
+    attack.run()

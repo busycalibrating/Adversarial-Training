@@ -28,5 +28,7 @@ setuptools.setup(
         'tqdm',
         'omegaconf',
         'torchvision',
+        'autoattack @ git+https://github.com/fra31/auto-attack#egg=autoattack',
+        'pandas',
       ],
 )

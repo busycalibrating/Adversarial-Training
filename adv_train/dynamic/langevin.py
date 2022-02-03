@@ -55,11 +55,7 @@ class Langevin(Attack, LabelMixin):
 
         if self.sign_flag:
             grad = grad.sign()
-        x = (
-            x
-            + self.eps_iter * grad
-            + self.noise_scale * math.sqrt(2 * self.eps_iter) * noise
-        )
+        x = x + self.eps_iter * grad + self.noise_scale * math.sqrt(2 * self.eps_iter) * noise
 
         x = self.projection(x, x_ref)
         return x

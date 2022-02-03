@@ -140,7 +140,7 @@ class modelD(nn.Module):
 
 
 class MadryModel(nn.Module):
-    def __init(self):
+    def __init__(self):
         super().__init__()
         self.num_classes = 10
 
