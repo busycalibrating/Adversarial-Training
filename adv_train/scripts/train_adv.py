@@ -97,7 +97,6 @@ class AdversarialTraining(Launcher):
                 choices=MnistModel,
                 help="MNIST model types",
             )
-
         elif args.dataset == DatasetType.CIFAR:
             parser.add_argument(
                 "--type",
@@ -118,7 +117,7 @@ class AdversarialTraining(Launcher):
         self.db_record_name = None
         if args.fancy_db_name:
             if args.wandb_group is None:
-                raise RuntimeError# the following line tells the scheduler to only run\(
+                raise RuntimeError(
                     "Specified --fancy_db_entry without a --wandb_group (required). "
                     "This won't log to WandB if you don't set --wandb_project"
                 )
@@ -233,11 +232,24 @@ class AdversarialTraining(Launcher):
 
         return total_err / len(self._dataset) * 100, total_loss / len(self._dataset)
 
-    def launch(self):
+    def launch(self, seed: int = None):
+        """
+        Launches a job; seed is an optional argument to support slurm array submissions. If not
+        specified, will default to self.seed
+        """
         # TODO: fix logging interface for submitit?
         logging.basicConfig(level=logging.INFO)
         logger = logging.getLogger(__name__)
 
+        # Overwrite some basic configs
+        if "SLURMD_NODENAME" in os.environ:
+            # get node name for debugging in the future if necessary
+            self.slurmd_nodename = os.environ.get("SLURMD_NODENAME")
+
+        if seed is not None:
+            self.seed = seed
+
+        # init tracking (wandb, local db)
         self.init_wandb()
         logger.info(f"Logging to '{os.path.join(self.log_dir, self.db_record_name)}'")
 
@@ -363,7 +375,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser = Attacker.add_arguments(parser)
     parser = AdversarialTraining.add_argument(parser)
-    args = parser.parse_args()
+    args = AdversarialTraining.parse_args_with_config(parser)
+
     logger.info(pprint.pformat(vars(args)))
 
     adv_train = AdversarialTraining(args)
