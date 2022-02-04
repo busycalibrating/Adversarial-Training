@@ -27,6 +27,8 @@ def get_arg_products(arg_dict: dict) -> list:
     if arg_dict is None:
         return []
     listify = [v if isinstance(v, list) else [v] for v in arg_dict.values()]
+    if len(listify) == 0:
+        return []
     product_args = [dict(zip(arg_dict, p)) for p in product(*listify)]
     return product_args
 
@@ -74,6 +76,7 @@ class Launcher:
         # set arguments from config file
         if args.config is not None:
             config = OmegaConf.load(args.config)
+            config = OmegaConf.to_object(config)
             parser.set_defaults(**config)
 
         # overwrite args from command line arguments
@@ -148,10 +151,12 @@ class Launcher:
             if len(product_args) > 0:
                 jobs = []
                 with self.executor.batch():
-                    for args in product_args:
-                        job = self.executor.submit(self.launch, **args)
-                        print(f"Launched batch job: {(str(job.job_id))}, args: {args}")
+                    for kwargs in product_args:
+                        job = self.executor.submit(self.launch, **kwargs)
                         jobs.append(job)
+
+                for job, kwargs in zip(jobs, product_args):
+                    print(f"Launched batch job: {job.job_id}, args: {kwargs}")
             # single job
             else:
                 job = self.executor.submit(self.launch)

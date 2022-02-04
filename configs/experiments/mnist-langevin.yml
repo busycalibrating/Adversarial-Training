@@ -9,5 +9,6 @@ eval_clean_flag: True
 wandb_group: mnist_langevin_1 
 wandb-project: adversarial_training
 fancy_db_name: True 
-seed: [0, 1, 2, 3, 4, 5, 6, 7] 
+# seed: [0, 1, 2, 3, 4, 5, 6, 7]
+seed: [2, 3]
 slurm: mila-long

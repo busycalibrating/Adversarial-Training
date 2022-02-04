@@ -249,6 +249,8 @@ class AdversarialTraining(Launcher):
         if seed is not None:
             self.seed = seed
 
+        logger.info(pprint.pformat(vars(self)))
+
         # init tracking (wandb, local db)
         self.init_wandb()
         logger.info(f"Logging to '{os.path.join(self.log_dir, self.db_record_name)}'")
@@ -372,6 +374,7 @@ class AdversarialTraining(Launcher):
 
 
 if __name__ == "__main__":
+
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser = Attacker.add_arguments(parser)
     parser = AdversarialTraining.add_argument(parser)
@@ -379,5 +382,9 @@ if __name__ == "__main__":
 
     logger.info(pprint.pformat(vars(args)))
 
+    array_args = {}
+    if isinstance(args.seed, list):
+        array_args['seed'] = args.seed
+
     adv_train = AdversarialTraining(args)
-    adv_train.run()
+    adv_train.run(array_args)
