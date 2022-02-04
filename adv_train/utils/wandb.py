@@ -22,19 +22,19 @@ class WandB:
         )
 
         group.add_argument(
-            "--wandb-name",
+            "--wandb_name",
             type=str,
             default=None,
             help="Name to be assigned to the WandB run. Leave blank for auto-generated names",
         )
         group.add_argument(
-            "--wandb-project", 
+            "--wandb_project", 
             type=str, 
             default=None, 
             help="WandB project. Leave empty to disable WandB"
         )
         group.add_argument(
-            "--wandb-entity",
+            "--wandb_entity",
             default=DEFAULT_WANDB_ENTITY,
             type=str,
             help="An entity is a username or team name where you're sending runs. This entity "
@@ -44,7 +44,7 @@ class WandB:
             "Change your default entity in your settings",
         )
         group.add_argument(
-            "--wandb-group",
+            "--wandb_group",
             type=str,
             default=None,
             help="Specify a group to organize individual runs into a larger experiment. "
@@ -92,7 +92,7 @@ class WandB:
             run = wandb.init(name=name, entity=entity, project=project, group=group, **kwargs)
 
         else:
-            logger.warn(f"--wandb-project is None; not logging to WandB!")
+            logger.warn(f"--wandb_project is None; not logging to WandB!")
             run = None
 
         return run

@@ -112,18 +112,7 @@ class AdversarialTraining(Launcher):
     def __init__(self, args):
         super().__init__(args)
         self.wandb_run = None
-
-        # TODO: hacky, fix this later
         self.db_record_name = None
-        if args.fancy_db_name:
-            if args.wandb_group is None:
-                raise RuntimeError(
-                    "Specified --fancy_db_entry without a --wandb_group (required). "
-                    "This won't log to WandB if you don't set --wandb_project"
-                )
-            self.log_dir = os.path.join(self.log_dir, args.wandb_group)
-            self.db_record_name = f'{time.strftime("%Y%m%d-%H%M%S")}__{str(uuid.uuid4())[:8]}'
-            logger.info(f"Logging to '{os.path.join(self.log_dir, self.db_record_name)}'")
 
     def init_wandb(self):
         if self.wandb_project is not None:
@@ -249,11 +238,21 @@ class AdversarialTraining(Launcher):
         if seed is not None:
             self.seed = seed
 
+        if args.fancy_db_name:
+            # TODO: hacky, fix this later
+            if args.wandb_group is None:
+                raise RuntimeError(
+                    "Specified --fancy_db_entry without a --wandb_group (required). "
+                    "This won't log to WandB if you don't set --wandb_project"
+                )
+            self.log_dir = os.path.join(self.log_dir, args.wandb_group)
+            self.db_record_name = f'{time.strftime("%Y%m%d-%H%M%S")}__{str(uuid.uuid4())[:8]}'
+
+        logger.info(f"Logging to '{os.path.join(self.log_dir, self.db_record_name)}'")
         logger.info(pprint.pformat(vars(self)))
 
         # init tracking (wandb, local db)
         self.init_wandb()
-        logger.info(f"Logging to '{os.path.join(self.log_dir, self.db_record_name)}'")
 
         db = Database(self.log_dir)
         self.record = db.create_record(self.db_record_name)
