@@ -5,6 +5,7 @@ import os
 import pprint
 import subprocess
 import time
+from black import parse_ast
 import tqdm
 import uuid
 import wandb
@@ -87,7 +88,11 @@ class AdversarialTraining(Launcher):
             help="If enabled, instead of creating a db entry in log_dir/<uuid>, creates an entry in logdir/<wandb_group>/<date>_",
         )
 
-        args, _ = parser.parse_known_args()
+        # TODO: bug here where if I specify cifar in the config file, this won't actually be picked up so
+        # specifying type='res18' will break it because it thinks its mnist (as per default args).
+        # temp solution: use --dataset=cifar flag, but fix this later
+        # args, _ = parser.parse_known_args()
+        args = cls.parse_args_with_config(parser, parse_known=True)
 
         if args.dataset == DatasetType.MNIST:
             parser.add_argument(

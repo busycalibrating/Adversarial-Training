@@ -41,10 +41,13 @@ class SlurmPartition(Enum):
     MILA_MAIN = "mila-main"
     MILA_UNKILLABLE = "mila-unkillable"
 
+
     @staticmethod
-    def load(name):
-        filename = "./configs/slurm/%s.yml" % name.value
+    def load(filename):
         return OmegaConf.load(filename)
+    # def load(name):
+        # filename = "./configs/slurm/%s.yml" % name.value
+        # return OmegaConf.load(filename)
 
 
 class Launcher:
@@ -60,18 +63,23 @@ class Launcher:
             help="Optional yaml config file specifying default arguments (can be overwritten with "
             "command line arguments)",
         )
+        # TOOD: fix this to make the path work correctly
         parser.add_argument(
             "--slurm",
             default=SlurmPartition.LOCAL,
-            type=SlurmPartition,
-            choices=SlurmPartition,
+            type=str,
+            # type=SlurmPartition,
+            # choices=SlurmPartition,
             help="Select slurm partition; specify config in the relevant config file!",
         )
         return parser
 
+
     @classmethod
-    def parse_args_with_config(cls, parser: argparse.ArgumentParser) -> argparse.Namespace:
-        args = parser.parse_args()
+    def parse_args_with_config(
+        cls, parser: argparse.ArgumentParser, parse_known: bool = False
+    ) -> argparse.Namespace:
+        args = parser.parse_known_args()[0] if parse_known else parser.parse_args()
 
         # set arguments from config file
         if args.config is not None:
@@ -80,7 +88,7 @@ class Launcher:
             parser.set_defaults(**config)
 
         # overwrite args from command line arguments
-        args = parser.parse_args()
+        args = parser.parse_known_args()[0] if parse_known else parser.parse_args()
         return args
 
     def __init__(self, args):
